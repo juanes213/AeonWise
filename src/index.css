@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-cosmic-black text-white font-body;
+  background-image: radial-gradient(circle at center, rgba(91, 33, 182, 0.3) 0%, rgba(10, 14, 23, 0.9) 80%);
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold leading-tight;
+  }
+  
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+  }
+  
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+  
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  p {
+    @apply text-lg leading-relaxed;
+  }
+}
+
+@layer components {
+  .cosmos-card {
+    @apply relative bg-card-gradient backdrop-blur-sm border border-cosmic-purple-700/30 rounded-lg p-6 shadow-lg;
+  }
+
+  .cosmos-card::before {
+    content: "";
+    @apply absolute inset-0 bg-stars bg-repeat opacity-5 rounded-lg pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply relative py-2 px-6 bg-cosmic-purple-600 hover:bg-cosmic-purple-700 rounded-md text-white font-display uppercase tracking-wider text-sm transition-all duration-300 overflow-hidden;
+  }
+
+  .btn-primary::after {
+    content: "";
+    @apply absolute inset-0 bg-white opacity-0 transition-opacity duration-300;
+  }
+
+  .btn-primary:hover::after {
+    @apply opacity-10;
+  }
+
+  .btn-secondary {
+    @apply py-2 px-6 bg-transparent border border-cosmic-gold-400 hover:bg-cosmic-gold-400/10 rounded-md text-cosmic-gold-400 font-display uppercase tracking-wider text-sm transition-all duration-300;
+  }
+
+  .magic-text {
+    @apply bg-gradient-to-r from-cosmic-purple-400 to-cosmic-blue-400 bg-clip-text text-transparent;
+  }
+
+  .star {
+    @apply absolute rounded-full bg-white animate-twinkle;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-novice {
+    @apply bg-cosmic-blue-900 text-cosmic-blue-100;
+  }
+
+  .badge-apprentice {
+    @apply bg-cosmic-purple-900 text-cosmic-purple-100;
+  }
+
+  .badge-journeyman {
+    @apply bg-cosmic-gold-900 text-cosmic-gold-100;
+  }
+
+  .badge-expert {
+    @apply bg-cosmic-gold-700 text-cosmic-gold-50;
+  }
+
+  .badge-master {
+    @apply bg-gradient-to-r from-cosmic-purple-600 to-cosmic-gold-500 text-white;
+  }
+}
+
+/* Star field animation */
+.starfield {
+  @apply fixed inset-0 z-[-1] overflow-hidden;
+}
