@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useToast } from '../hooks/useToast';
 import { Calendar, Clock, DollarSign, Volume2, Play, Sparkles } from 'lucide-react';
 import { getRankBadgeClass } from '../lib/utils';
+import { RankBadge } from '../components/ranks/RankBadge';
 
 interface Mentor {
   id: string;
@@ -38,7 +39,7 @@ const mentors: Mentor[] = [
   {
     id: '1',
     name: 'Alexandria',
-    rank: 'master',
+    rank: 'cosmic_sage',
     category: 'Data Science',
     specialty: 'Machine Learning & AI',
     price: 120,
@@ -54,7 +55,7 @@ const mentors: Mentor[] = [
   {
     id: '2',
     name: 'Marcus',
-    rank: 'expert',
+    rank: 'galactic_guide',
     category: 'Programming',
     specialty: 'Full-Stack Development',
     price: 95,
@@ -70,7 +71,7 @@ const mentors: Mentor[] = [
   {
     id: '3',
     name: 'Sophia',
-    rank: 'master',
+    rank: 'comet_crafter',
     category: 'Design',
     specialty: 'UX/UI & Psychology',
     price: 110,
@@ -86,7 +87,7 @@ const mentors: Mentor[] = [
   {
     id: '4',
     name: 'Julian',
-    rank: 'journeyman',
+    rank: 'astral_apprentice',
     category: 'Music',
     specialty: 'Music Theory & Composition',
     price: 80,
@@ -102,7 +103,7 @@ const mentors: Mentor[] = [
   {
     id: '5',
     name: 'Elena',
-    rank: 'expert',
+    rank: 'cosmic_sage',
     category: 'Business',
     specialty: 'Entrepreneurship & Funding',
     price: 150,
@@ -118,7 +119,7 @@ const mentors: Mentor[] = [
   {
     id: '6',
     name: 'Raj',
-    rank: 'master',
+    rank: 'galactic_guide',
     category: 'Programming',
     specialty: 'Algorithms & System Design',
     price: 130,
@@ -146,7 +147,6 @@ const MentorshipPage: React.FC = () => {
     : mentors.filter(mentor => mentor.category === selectedCategory);
 
   const playIntroduction = (mentorId: string) => {
-    // In a real app, this would play the ElevenLabs-generated audio
     if (playingAudio === mentorId) {
       setPlayingAudio(null);
       toast({
@@ -159,7 +159,6 @@ const MentorshipPage: React.FC = () => {
         description: 'This would play the mentor\'s audio introduction in a real app',
       });
       
-      // Simulate audio playing for 5 seconds
       setTimeout(() => {
         setPlayingAudio(null);
       }, 5000);
@@ -172,7 +171,6 @@ const MentorshipPage: React.FC = () => {
   };
 
   const handleBooking = () => {
-    // In a real app, this would process the booking
     toast({
       title: 'Session Booked!',
       description: `Your session with ${selectedMentor?.name} has been scheduled.`,
@@ -254,9 +252,7 @@ const MentorshipPage: React.FC = () => {
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute top-4 right-4">
-                    <span className={`badge ${getRankBadgeClass(mentor.rank)}`}>
-                      {t(`ranks.${mentor.rank}`)}
-                    </span>
+                    <RankBadge rank={mentor.rank} points={0} />
                   </div>
                 </div>
 
@@ -357,9 +353,7 @@ const MentorshipPage: React.FC = () => {
                 />
                 <div>
                   <p className="text-cosmic-gold-400">{selectedMentor.specialty}</p>
-                  <span className={`badge ${getRankBadgeClass(selectedMentor.rank)}`}>
-                    {t(`ranks.${selectedMentor.rank}`)}
-                  </span>
+                  <RankBadge rank={selectedMentor.rank} points={0} size="sm" />
                 </div>
               </div>
               
