@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
+import { Anthropic } from 'npm:@anthropic-ai/sdk@0.17.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,64 +8,57 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Only accept POST requests
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-        status: 405,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
-
-    // Parse request JSON
     const { text } = await req.json();
 
     if (!text) {
-      return new Response(JSON.stringify({ error: 'Text is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return new Response(
+        JSON.stringify({ error: 'Text is required' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // In a real implementation, this would call Claude API
-    // For demo purposes, we'll use a simple extraction logic
-    const words = text.toLowerCase().split(/[\s,\.]+/);
-    const commonSkills = [
-      'javascript', 'python', 'react', 'node', 'design', 'marketing',
-      'data', 'machine learning', 'ai', 'ui', 'ux', 'writing', 'teaching',
-      'project management', 'leadership', 'communication', 'angular',
-      'vue', 'typescript', 'sql', 'database', 'cloud', 'aws', 'azure',
-      'devops', 'music', 'art', 'public speaking', 'coaching', 'analytics'
-    ];
+    const anthropic = new Anthropic({
+      apiKey: Deno.env.get('CLAUDE_API_KEY') || '',
+    });
+
+    const systemPrompt = `Extract teachable skills and learning goals from the user's input. Also generate a learning path for their goals.
+    Format the response as JSON with these fields:
+    - skills: array of skills they can teach
+    - learning_goals: array of skills they want to learn
+    - learning_path: array of steps to achieve their learning goals
     
-    const extractedSkills = commonSkills.filter(skill => 
-      words.some(word => word.includes(skill.toLowerCase()))
-    ).map(skill => 
-      // Capitalize first letter of each word
-      skill.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    Example input: "I know Python and data science, want to learn web development"
+    Example output: {
+      "skills": ["Python", "Data Science"],
+      "learning_goals": ["Web Development"],
+      "learning_path": ["HTML Fundamentals", "CSS Basics", "JavaScript Essentials", "React Framework"]
+    }`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-3-sonnet-20240229',
+      max_tokens: 1000,
+      temperature: 0.5,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: text }]
+    });
+
+    const result = JSON.parse(message.content[0].text);
+
+    return new Response(
+      JSON.stringify(result),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-    // Return the extracted skills
-    return new Response(JSON.stringify({ skills: extractedSkills }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
+    console.error('Error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }), 
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });

@@ -4,42 +4,42 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Mock API for skill extraction using Claude
-app.post('/api/extract-skills', (req, res) => {
+app.post('/api/extract-skills', async (req, res) => {
   const { text } = req.body;
   
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
   }
-  
-  // In a real implementation, this would call Claude API
-  // For demo purposes, we'll use a simple extraction logic
-  const words = text.toLowerCase().split(/[\s,\.]+/);
-  const commonSkills = [
-    'javascript', 'python', 'react', 'node', 'design', 'marketing',
-    'data', 'machine learning', 'ui', 'ux', 'writing', 'teaching',
-    'project management', 'leadership', 'communication'
-  ];
-  
-  const extractedSkills = commonSkills.filter(skill => 
-    words.some(word => word.includes(skill.toLowerCase()))
-  );
-  
-  setTimeout(() => {
-    res.json({ skills: extractedSkills });
-  }, 500); // Simulate API delay
+
+  try {
+    const response = await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/extract-skills`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to extract skills');
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Error extracting skills:', error);
+    res.status(500).json({ error: 'Failed to extract skills' });
+  }
 });
 
-// Mock API for finding matches
 app.post('/api/find-matches', (req, res) => {
   const { skills, learningGoals, userId } = req.body;
   
@@ -49,8 +49,7 @@ app.post('/api/find-matches', (req, res) => {
     });
   }
   
-  // In a real implementation, this would query the database
-  // For demo purposes, return mock data
+  // Mock data for demonstration
   const mockMatches = [
     {
       id: 'usr123',
@@ -80,10 +79,9 @@ app.post('/api/find-matches', (req, res) => {
   
   setTimeout(() => {
     res.json({ matches: mockMatches });
-  }, 1000); // Simulate API delay
+  }, 1000);
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
