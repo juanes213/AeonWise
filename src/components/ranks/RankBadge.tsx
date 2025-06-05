@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Sparkles, Rocket, Comet, Galaxy, Infinity } from 'lucide-react';
+import { Star, Sparkles, Rocket, Home as Comet, Salad as Galaxy, Infinity } from 'lucide-react';
 
 interface RankBadgeProps {
   rank: string;
