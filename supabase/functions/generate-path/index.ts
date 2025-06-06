@@ -33,11 +33,20 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Generate a learning path as a JSON array for the given goal. Example: "Web Development" → ["HTML Basics", "CSS Fundamentals", "JavaScript Essentials", "React Framework"]. Ensure paths are logical and concise.'
+            content: `You are an AI assistant for AeonWise, a skill-sharing platform. Generate a logical and concise learning path as a JSON array for the given learning goal. Each step should be a specific, beginner-friendly topic or skill. Limit the path to 3-5 steps. Ensure the output is valid JSON.
+
+Example:
+- Input: "Web Development"
+- Output: ["HTML Basics", "CSS Fundamentals", "JavaScript Essentials", "React Framework"]
+
+Rules:
+- Paths must be practical and sequential (e.g., foundational skills before advanced).
+- Use clear, descriptive step names (e.g., "Python Basics" instead of "Python").
+- Return an empty array if the goal is invalid or too vague.`
           },
           {
             role: 'user',
-            content: goal
+            content:  `Generate a learning path for: "${learningGoal}"`
           }
         ],
         temperature: 0.3,
