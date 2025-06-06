@@ -360,3 +360,5 @@ const SkillSwapPage: React.FC = () => {
     </div>
   );
 };
+
+export default SkillSwapPage
