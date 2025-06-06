@@ -12,11 +12,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { text } = await req.json();
+    const { goal, userId } = await req.json();
 
-    if (!text) {
+    if (!goal) {
       return new Response(
-        JSON.stringify({ error: 'Text is required' }), 
+        JSON.stringify({ error: 'Learning goal is required' }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -33,11 +33,11 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Extract teachable skills and learning goals from the input text as JSON. Example input: "I know Python, want to learn web development". Output: { "teach": ["Python"], "learn": ["Web Development"] }. Validate ambiguous inputs.'
+            content: 'Generate a learning path as a JSON array for the given goal. Example: "Web Development" → ["HTML Basics", "CSS Fundamentals", "JavaScript Essentials", "React Framework"]. Ensure paths are logical and concise.'
           },
           {
             role: 'user',
-            content: text
+            content: goal
           }
         ],
         temperature: 0.3,
@@ -50,10 +50,10 @@ Deno.serve(async (req) => {
     }
 
     const groqResponse = await response.json();
-    const result = JSON.parse(groqResponse.choices[0].message.content);
+    const learningPath = JSON.parse(groqResponse.choices[0].message.content);
 
-    // Store in Supabase if user_id is provided
-    if (req.headers.get('user-id')) {
+    // Store in Supabase if userId is provided
+    if (userId) {
       const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
       const supabase = createClient(supabaseUrl, supabaseKey);
@@ -61,11 +61,10 @@ Deno.serve(async (req) => {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
-          skills: result.teach,
-          learning_goals: result.learn,
+          learning_path: learningPath,
           updated_at: new Date().toISOString()
         })
-        .eq('id', req.headers.get('user-id'));
+        .eq('id', userId);
 
       if (updateError) {
         throw updateError;
@@ -73,7 +72,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify(result),
+      JSON.stringify({ path: learningPath }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
