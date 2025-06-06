@@ -37,11 +37,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         navigate('/auth/signin');
       } else {
         const { error } = await signIn(formData.email, formData.password);
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
         
         toast({
           title: 'Welcome back!',
           description: 'Successfully signed in',
+        });
+        
+        // Clear form data after successful sign in
+        setFormData({
+          email: '',
+          password: '',
+          username: '',
         });
         
         navigate('/');
@@ -61,7 +70,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       {mode === 'signup' && (
         <div>
-          <label htmlFor="username\" className="block text-sm font-medium text-gray-200">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-200">
             Username
           </label>
           <div className="mt-1 relative">

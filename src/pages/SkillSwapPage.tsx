@@ -32,16 +32,12 @@ const SkillSwapPage: React.FC = () => {
   const [showMatches, setShowMatches] = useState(false);
 
   useEffect(() => {
+    // Redirect to signup if not authenticated and not loading
     if (!isLoading && !user) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please sign in to use the skill swap feature',
-      });
-      navigate('/auth');
+      navigate('/auth/signup');
+      return;
     }
-  }, [user, isLoading, navigate, toast]);
 
-  useEffect(() => {
     // Load user's existing skills and learning goals if available
     if (user) {
       if (user.skills && user.skills.length > 0) {
@@ -52,7 +48,7 @@ const SkillSwapPage: React.FC = () => {
         setLearningInput(user.learning_goals.join(', '));
       }
     }
-  }, [user]);
+  }, [user, isLoading, navigate]);
 
   const findMatches = async () => {
     if (!skillsInput.trim() || !learningInput.trim()) {
@@ -65,12 +61,7 @@ const SkillSwapPage: React.FC = () => {
     }
 
     if (!user) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please sign in to use this feature',
-        variant: 'destructive',
-      });
-      navigate('/auth');
+      navigate('/auth/signup');
       return;
     }
 
@@ -94,13 +85,7 @@ const SkillSwapPage: React.FC = () => {
         throw updateError;
       }
 
-      // Find matches by looking for users who:
-      // 1. Have skills that match your learning goals
-      // 2. Have learning goals that match your skills
-      // 3. Are not yourself
-      
-      // In a real application, we would send this to a Claude-powered API endpoint
-      // for intelligent matching. For the demo, we'll simulate finding matches.
+      // Find matches
       setTimeout(async () => {
         try {
           const { data, error } = await supabase
@@ -114,7 +99,6 @@ const SkillSwapPage: React.FC = () => {
 
           // Simple matching algorithm
           const potentialMatches = data.map(profile => {
-            // Calculate match scores
             let matchScore = 0;
             
             // Your skills matching their learning goals
@@ -170,7 +154,7 @@ const SkillSwapPage: React.FC = () => {
         } finally {
           setIsSearching(false);
         }
-      }, 2000); // Simulate API delay
+      }, 2000);
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -183,7 +167,6 @@ const SkillSwapPage: React.FC = () => {
   };
 
   const initiateConnection = (matchId: string) => {
-    // In a real app, this would create a connection/chat between users
     toast({
       title: 'Connection Initiated',
       description: 'A connection request has been sent!',
@@ -377,5 +360,3 @@ const SkillSwapPage: React.FC = () => {
     </div>
   );
 };
-
-export default SkillSwapPage;
