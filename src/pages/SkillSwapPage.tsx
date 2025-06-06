@@ -32,12 +32,14 @@ const SkillSwapPage: React.FC = () => {
   const [showMatches, setShowMatches] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     if (!isLoading && !user) {
       navigate('/auth/signup');
       return;
     }
 
-    if (user) {
+    if (mounted && user) {
       if (user.skills && user.skills.length > 0) {
         setSkillsInput(user.skills.join(', '));
       }
@@ -46,6 +48,10 @@ const SkillSwapPage: React.FC = () => {
         setLearningInput(user.learning_goals.join(', '));
       }
     }
+
+    return () => {
+      mounted = false;
+    };
   }, [user, isLoading, navigate]);
 
   const findMatches = async () => {
