@@ -69,7 +69,6 @@ const SkillSwapPage: React.FC = () => {
     setShowMatches(false);
 
     try {
-      // Update user's skills and learning goals in the database
       const skills = skillsInput.split(',').map(s => s.trim()).filter(s => s);
       const learning_goals = learningInput.split(',').map(g => g.trim()).filter(g => g);
 
@@ -97,11 +96,9 @@ const SkillSwapPage: React.FC = () => {
             throw error;
           }
 
-          // Simple matching algorithm
           const potentialMatches = data.map(profile => {
             let matchScore = 0;
             
-            // Your skills matching their learning goals
             for (const skill of skills) {
               if (profile.learning_goals.some(goal => 
                 goal.toLowerCase().includes(skill.toLowerCase())
@@ -110,7 +107,6 @@ const SkillSwapPage: React.FC = () => {
               }
             }
             
-            // Their skills matching your learning goals
             for (const goal of learning_goals) {
               if (profile.skills.some(skill => 
                 skill.toLowerCase().includes(goal.toLowerCase())
@@ -129,11 +125,10 @@ const SkillSwapPage: React.FC = () => {
             };
           });
           
-          // Filter to only include users with a match score > 0 and sort by match score
           const matchedUsers = potentialMatches
             .filter(profile => profile.matchScore > 0)
             .sort((a, b) => b.matchScore - a.matchScore)
-            .slice(0, 5); // Limit to top 5 matches
+            .slice(0, 5);
           
           setMatches(matchedUsers);
           setShowMatches(true);
@@ -361,4 +356,4 @@ const SkillSwapPage: React.FC = () => {
   );
 };
 
-export default SkillSwapPage
+export default SkillSwapPage;

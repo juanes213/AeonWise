@@ -45,7 +45,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
           title: 'Welcome back!',
           description: 'Successfully signed in',
         });
-        
+
         // Clear form data after successful sign in
         setFormData({
           email: '',
@@ -56,9 +56,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         navigate('/');
       }
     } catch (error: any) {
+      console.error('Auth error:', error);
       toast({
         title: 'Error',
-        description: error.message,
+        description: error.message || 'An error occurred during authentication',
         variant: 'destructive',
       });
     } finally {
@@ -70,7 +71,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       {mode === 'signup' && (
         <div>
-          <label htmlFor="username\" className="block text-sm font-medium text-gray-200">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-200">
             Username
           </label>
           <div className="mt-1 relative">
@@ -83,6 +84,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               className="pl-10 w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
               placeholder="Enter your username"
+              disabled={loading}
             />
           </div>
         </div>
@@ -102,6 +104,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             className="pl-10 w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
             placeholder="Enter your email"
+            disabled={loading}
           />
         </div>
       </div>
@@ -120,6 +123,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             className="pl-10 w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
             placeholder="Enter your password"
+            disabled={loading}
           />
         </div>
       </div>
