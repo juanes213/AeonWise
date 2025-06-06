@@ -32,13 +32,11 @@ const SkillSwapPage: React.FC = () => {
   const [showMatches, setShowMatches] = useState(false);
 
   useEffect(() => {
-    // Redirect to signup if not authenticated and not loading
     if (!isLoading && !user) {
       navigate('/auth/signup');
       return;
     }
 
-    // Load user's existing skills and learning goals if available
     if (user) {
       if (user.skills && user.skills.length > 0) {
         setSkillsInput(user.skills.join(', '));
@@ -84,7 +82,6 @@ const SkillSwapPage: React.FC = () => {
         throw updateError;
       }
 
-      // Find matches
       setTimeout(async () => {
         try {
           const { data, error } = await supabase
