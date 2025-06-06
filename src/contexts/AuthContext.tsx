@@ -23,33 +23,39 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    const getSession = async () => {
+    const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error getting session:', error);
-        }
+        if (error) throw error;
+        
         if (mounted) {
           setUser(session?.user ?? null);
+          setInitialized(true);
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error getting session:', error);
+        console.error('Error initializing auth:', error);
         if (mounted) {
+          setInitialized(true);
           setLoading(false);
         }
       }
     };
 
-    getSession();
+    initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      if (event === 'SIGNED_IN') {
         setUser(session?.user ?? null);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
       }
     });
 
@@ -61,20 +67,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        return { error };
-      }
+      
+      if (error) throw error;
       setUser(data.user);
       return { error: null };
     } catch (error) {
       console.error('Error signing in:', error);
       return { error };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -82,25 +91,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: { username }
         }
       });
-      if (error) {
-        return { error };
-      }
+      
+      if (error) throw error;
       setUser(data.user);
       return { error: null };
     } catch (error) {
       console.error('Error signing up:', error);
       return { error };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
+      setLoading(true);
       await supabase.auth.signOut();
       setUser(null);
     } catch (error) {
       console.error('Error signing out:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Don't render children until auth is initialized
+  if (!initialized) {
+    return null;
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
