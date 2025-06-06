@@ -34,20 +34,24 @@ const SkillSwapPage: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
-    if (!isLoading && !user) {
-      navigate('/auth/signup');
-      return;
-    }
+    const initializeInputs = () => {
+      if (!isLoading && !user) {
+        navigate('/auth/signup');
+        return;
+      }
 
-    if (mounted && user) {
-      if (user.skills && user.skills.length > 0) {
-        setSkillsInput(user.skills.join(', '));
+      if (mounted && user) {
+        if (user.skills?.length > 0) {
+          setSkillsInput(user.skills.join(', '));
+        }
+        
+        if (user.learning_goals?.length > 0) {
+          setLearningInput(user.learning_goals.join(', '));
+        }
       }
-      
-      if (user.learning_goals && user.learning_goals.length > 0) {
-        setLearningInput(user.learning_goals.join(', '));
-      }
-    }
+    };
+
+    initializeInputs();
 
     return () => {
       mounted = false;
