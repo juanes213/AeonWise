@@ -15,6 +15,7 @@ import SkillSwapPage from './pages/SkillSwapPage';
 import MentorshipPage from './pages/MentorshipPage';
 import CoursesPage from './pages/CoursesPage';
 import ProfilePage from './pages/ProfilePage';
+import TestPage from './pages/TestPage';
 import NotFoundPage from './pages/NotFoundPage';
 import StarfieldBackground from './components/effects/StarfieldBackground';
 
@@ -37,6 +38,7 @@ function App() {
                     <Route path="/mentorship" element={<MentorshipPage />} />
                     <Route path="/courses" element={<CoursesPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/test" element={<TestPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
                 </main>
