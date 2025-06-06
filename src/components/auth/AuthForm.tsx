@@ -70,7 +70,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       {mode === 'signup' && (
         <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-200">
+          <label htmlFor="username\" className="block text-sm font-medium text-gray-200">
             Username
           </label>
           <div className="mt-1 relative">
