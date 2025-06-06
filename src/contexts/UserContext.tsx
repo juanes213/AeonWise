@@ -49,21 +49,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check active session and get user
+    let mounted = true;
+
     const getInitialSession = async () => {
       try {
-        setIsLoading(true);
-        
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          const { data: profile } = await supabase
+        if (session?.user && mounted) {
+          const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
             
-          if (profile) {
+          if (!error && profile && mounted) {
             setUser({
               ...profile,
               rank: calculateRank(profile.points)
@@ -73,43 +72,65 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error('Error getting initial session:', error);
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     getInitialSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          const { data: profile } = await supabase
+        if (event === 'SIGNED_IN' && session && mounted) {
+          const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
             
-          if (profile) {
+          if (!error && profile && mounted) {
             setUser({
               ...profile,
               rank: calculateRank(profile.points)
             });
           }
-        } else if (event === 'SIGNED_OUT') {
+        } else if (event === 'SIGNED_OUT' && mounted) {
           setUser(null);
         }
       }
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [supabase]);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error };
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        return { error };
+      }
+
+      if (data.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (!profileError && profile) {
+          setUser({
+            ...profile,
+            rank: calculateRank(profile.points)
+          });
+        }
+      }
+
+      return { error: null };
     } catch (error) {
       console.error('Error signing in:', error);
       return { error };
@@ -118,7 +139,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
-      const { error } = await supabase.auth.signUp({ 
+      const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
@@ -126,12 +147,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
-      if (!error) {
-        // Create initial profile with default values
+      if (error) {
+        return { error };
+      }
+
+      if (data.user) {
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
             {
+              id: data.user.id,
               email,
               username,
               points: 0,
@@ -141,10 +166,24 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           ]);
         
+        if (!profileError) {
+          setUser({
+            id: data.user.id,
+            email,
+            username,
+            points: 0,
+            rank: 'novice',
+            skills: [],
+            learning_goals: [],
+            bio: '',
+            created_at: new Date().toISOString()
+          });
+        }
+        
         return { error: profileError };
       }
       
-      return { error };
+      return { error: new Error('No user data returned') };
     } catch (error) {
       console.error('Error signing up:', error);
       return { error };
@@ -152,8 +191,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
