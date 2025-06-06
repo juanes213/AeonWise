@@ -33,14 +33,25 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Extract teachable skills and learning goals from the input text as JSON. Example input: "I know Python, want to learn web development". Output: { "teach": ["Python"], "learn": ["Web Development"] }. Validate ambiguous inputs.'
+            content: `You are an AI assistant for AeonWise, a skill-sharing platform. Extract teachable skills and learning goals from the input text, and generate a logical learning path for each goal. Return a JSON object with three keys: "teach" (array of skills the user can teach), "learn" (array of skills the user wants to learn), and "path" (array of steps for the first learning goal). Validate inputs to ensure clarity and specificity. Handle ambiguous inputs by selecting the most relevant skills or goals.
+
+Example:
+- Input: "I know Python, want to learn web development"
+- Output: { "teach": ["Python"], "learn": ["Web Development"], "path": ["HTML", "CSS", "JavaScript"] }
+
+Rules:
+- Skills and goals must be specific (e.g., "coding" → "Python" if context suggests it).
+- If input is vague (e.g., "I’m good at tech"), infer likely skills (e.g., ["Technology"]) and note ambiguity.
+- Learning paths should be concise (3-5 steps) and practical.
+- Return valid JSON, even for invalid inputs (use empty arrays if no skills/goals are detected).
+- Flag ambiguous inputs with a "notes" key in the output.`
           },
           {
             role: 'user',
-            content: text
+            content: `Extract skills, goals, and generate a learning path for: "${userInput}"`
           }
         ],
-        temperature: 0.3,
+        temperature: 0.5,
         max_tokens: 500
       })
     });
