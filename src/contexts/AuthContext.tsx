@@ -31,7 +31,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+        
+        if (error) {
+          // Check if the error is related to invalid refresh token
+          if (error.message?.includes('Invalid Refresh Token') || 
+              error.message?.includes('Refresh Token Not Found')) {
+            // Clear the invalid session by signing out
+            await supabase.auth.signOut();
+            if (mounted) {
+              setUser(null);
+              setInitialized(true);
+              setLoading(false);
+            }
+            return;
+          }
+          throw error;
+        }
         
         if (mounted) {
           setUser(session?.user ?? null);
@@ -41,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (mounted) {
+          setUser(null);
           setInitialized(true);
           setLoading(false);
         }
