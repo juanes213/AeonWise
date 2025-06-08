@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import { AuthForm } from '../../components/auth/AuthForm';
 
 const SignUpPage: React.FC = () => {
   return (
@@ -16,13 +15,20 @@ const SignUpPage: React.FC = () => {
         <div className="cosmos-card p-8">
           <div className="text-center mb-8">
             <Sparkles className="h-12 w-12 text-cosmic-gold-400 mx-auto mb-4" />
-            <h1 className="text-3xl font-display mb-2">Create Account</h1>
+            <h1 className="text-3xl font-display mb-2">Join the Cosmos</h1>
             <p className="text-gray-400">
-              Join our community of learners and mentors
+              Begin your journey of wisdom and knowledge sharing
             </p>
           </div>
 
-          <AuthForm mode="signup" />
+          <div className="space-y-4">
+            <Link
+              to="/onboarding/questionnaire"
+              className="btn-primary w-full block text-center"
+            >
+              Create Your Cosmic Profile
+            </Link>
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-gray-400">

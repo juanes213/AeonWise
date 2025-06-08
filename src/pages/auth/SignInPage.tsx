@@ -16,9 +16,9 @@ const SignInPage: React.FC = () => {
         <div className="cosmos-card p-8">
           <div className="text-center mb-8">
             <Sparkles className="h-12 w-12 text-cosmic-gold-400 mx-auto mb-4" />
-            <h1 className="text-3xl font-display mb-2">Welcome Back</h1>
+            <h1 className="text-3xl font-display mb-2">Welcome to AeonWise</h1>
             <p className="text-gray-400">
-              Sign in to continue your learning journey
+              Sign in to continue your cosmic learning journey
             </p>
           </div>
 
@@ -31,7 +31,7 @@ const SignInPage: React.FC = () => {
                 to="/auth/signup"
                 className="text-cosmic-purple-400 hover:text-cosmic-purple-300 transition-colors"
               >
-                Sign up
+                Create your cosmic profile
               </Link>
             </p>
           </div>

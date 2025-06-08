@@ -11,13 +11,19 @@ import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
 import SignInPage from './pages/auth/SignInPage';
 import SignUpPage from './pages/auth/SignUpPage';
+import OnboardingQuestionnaire from './pages/onboarding/OnboardingQuestionnaire';
+import OnboardingSkills from './pages/onboarding/OnboardingSkills';
+import OnboardingRecommendations from './pages/onboarding/OnboardingRecommendations';
 import SkillSwapPage from './pages/SkillSwapPage';
 import MentorshipPage from './pages/MentorshipPage';
 import CoursesPage from './pages/CoursesPage';
 import ProfilePage from './pages/ProfilePage';
+import RankingPage from './pages/RankingPage';
 import TestPage from './pages/TestPage';
 import NotFoundPage from './pages/NotFoundPage';
 import StarfieldBackground from './components/effects/StarfieldBackground';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import AuthGuard from './components/auth/AuthGuard';
 
 function App() {
   return (
@@ -27,22 +33,37 @@ function App() {
           <UserProvider>
             <Router>
               <div className="flex flex-col min-h-screen">
-                <Navbar />
-                <main className="flex-grow">
-                  <StarfieldBackground />
-                  <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/auth/signin" element={<SignInPage />} />
-                    <Route path="/auth/signup" element={<SignUpPage />} />
-                    <Route path="/skill-swap" element={<SkillSwapPage />} />
-                    <Route path="/mentorship" element={<MentorshipPage />} />
-                    <Route path="/courses" element={<CoursesPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/test" element={<TestPage />} />
-                    <Route path="*" element={<NotFoundPage />} />
-                  </Routes>
-                </main>
-                <Footer />
+                <StarfieldBackground />
+                <Routes>
+                  {/* Public auth routes */}
+                  <Route path="/auth/signin" element={<SignInPage />} />
+                  <Route path="/auth/signup" element={<SignUpPage />} />
+                  
+                  {/* Onboarding routes */}
+                  <Route path="/onboarding/questionnaire" element={<OnboardingQuestionnaire />} />
+                  <Route path="/onboarding/skills" element={<OnboardingSkills />} />
+                  <Route path="/onboarding/recommendations" element={<OnboardingRecommendations />} />
+                  
+                  {/* Protected main app routes */}
+                  <Route path="/*" element={
+                    <AuthGuard>
+                      <Navbar />
+                      <main className="flex-grow">
+                        <Routes>
+                          <Route path="/" element={<HomePage />} />
+                          <Route path="/skill-swap" element={<SkillSwapPage />} />
+                          <Route path="/mentorship" element={<MentorshipPage />} />
+                          <Route path="/courses" element={<CoursesPage />} />
+                          <Route path="/profile" element={<ProfilePage />} />
+                          <Route path="/ranking" element={<RankingPage />} />
+                          <Route path="/test" element={<TestPage />} />
+                          <Route path="*" element={<NotFoundPage />} />
+                        </Routes>
+                      </main>
+                      <Footer />
+                    </AuthGuard>
+                  } />
+                </Routes>
                 <Toaster />
               </div>
             </Router>

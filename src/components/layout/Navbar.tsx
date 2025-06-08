@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Menu, X, Globe } from 'lucide-react';
+import { Menu, X, Globe, Trophy } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { cn } from '../../lib/utils';
 
@@ -31,6 +31,7 @@ const Navbar: React.FC = () => {
     { to: '/skill-swap', label: t('nav.skillSwap') },
     { to: '/mentorship', label: t('nav.mentorship') },
     { to: '/courses', label: t('nav.courses') },
+    { to: '/ranking', label: 'Ranking', icon: Trophy },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -60,12 +61,13 @@ const Navbar: React.FC = () => {
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  'font-display text-sm uppercase tracking-wider transition-colors',
+                  'font-display text-sm uppercase tracking-wider transition-colors flex items-center',
                   isActive(link.to) 
                     ? 'text-cosmic-gold-400' 
                     : 'text-white/80 hover:text-cosmic-gold-400'
                 )}
               >
+                {link.icon && <link.icon className="h-4 w-4 mr-1" />}
                 {link.label}
               </Link>
             ))}
@@ -133,13 +135,14 @@ const Navbar: React.FC = () => {
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  'font-display text-sm uppercase tracking-wider py-2',
+                  'font-display text-sm uppercase tracking-wider py-2 flex items-center',
                   isActive(link.to) 
                     ? 'text-cosmic-gold-400' 
                     : 'text-white/80'
                 )}
                 onClick={() => setIsMenuOpen(false)}
               >
+                {link.icon && <link.icon className="h-4 w-4 mr-2" />}
                 {link.label}
               </Link>
             ))}
