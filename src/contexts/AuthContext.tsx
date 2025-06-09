@@ -28,6 +28,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
+    const clearAuthStorage = () => {
+      // Clear all possible Supabase auth storage keys
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes('supabase') || key.includes('auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
+    };
+
     const initializeAuth = async () => {
       try {
         // Clear any invalid tokens first
@@ -36,11 +46,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             const parsedSession = JSON.parse(storedSession);
             if (!parsedSession.access_token || !parsedSession.refresh_token) {
-              localStorage.removeItem('sb-sgfqjuxymauyesxqxdej-auth-token');
+              clearAuthStorage();
               await supabase.auth.signOut();
             }
           } catch (e) {
-            localStorage.removeItem('sb-sgfqjuxymauyesxqxdej-auth-token');
+            clearAuthStorage();
             await supabase.auth.signOut();
           }
         }
@@ -49,7 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (error) {
           console.warn('Auth session error:', error);
-          // Clear invalid session
+          // Clear invalid session immediately
+          clearAuthStorage();
           await supabase.auth.signOut();
           if (mounted) {
             setUser(null);
@@ -66,6 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
+        // Clear storage on any initialization error
+        clearAuthStorage();
+        await supabase.auth.signOut();
         if (mounted) {
           setUser(null);
           setInitialized(true);
@@ -142,8 +156,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       await supabase.auth.signOut();
       setUser(null);
-      // Clear any stored session data
-      localStorage.removeItem('sb-sgfqjuxymauyesxqxdej-auth-token');
+      // Clear all auth-related storage
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes('supabase') || key.includes('auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {
