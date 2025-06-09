@@ -99,6 +99,22 @@ export const SimpleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       setIsLoading(true);
       
+      // Check if username already exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is what we want
+        throw checkError;
+      }
+
+      if (existingProfile) {
+        return { success: false, message: 'Username is already taken. Please choose a different username.' };
+      }
+      
       const { data, error } = await supabase.rpc('register_user', {
         username_input: username,
         password_input: password
@@ -122,6 +138,12 @@ export const SimpleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     } catch (error: any) {
       console.error('Sign up error:', error);
+      
+      // Handle specific database constraint errors
+      if (error.code === '23505' && error.message.includes('profiles_username_key')) {
+        return { success: false, message: 'Username is already taken. Please choose a different username.' };
+      }
+      
       return { success: false, message: error.message || 'Sign up failed' };
     } finally {
       setIsLoading(false);
