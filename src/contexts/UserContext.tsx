@@ -229,7 +229,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      // First, create the auth user
+      // Create the auth user with username in metadata
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -240,42 +240,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) throw error;
 
-      if (data.user) {
-        // Create the profile immediately after user creation
-        const newProfile = {
-          id: data.user.id,
-          email,
-          username,
-          points: 0,
-          skills: [],
-          learning_goals: [],
-          bio: '',
-        };
-
-        const { data: createdProfile, error: profileError } = await supabase
-          .from('profiles')
-          .insert([newProfile])
-          .select()
-          .single();
-        
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          throw new Error(`Failed to create profile: ${profileError.message}`);
-        }
-
-        // Set the user immediately with the created profile
-        const userProfile = {
-          ...createdProfile,
-          rank: 'starspark' as UserRank,
-          created_at: createdProfile.created_at || new Date().toISOString()
-        };
-
-        setUser(userProfile);
-
-        return { error: null };
-      }
-
-      throw new Error('No user data returned from signup');
+      // Don't create profile here - let the auth state change handler and database triggers handle it
+      // The profile will be created automatically when the user is confirmed and signed in
+      
+      return { error: null };
     } catch (error) {
       console.error('Error signing up:', error);
       return { error };
