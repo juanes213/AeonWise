@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Search, UserPlus, ArrowRight, Loader2, Plus, X, Sparkles, BookOpen, Users } from 'lucide-react';
-import { useUser } from '../contexts/UserContext';
+import { useSimpleAuth } from '../contexts/SimpleAuthContext';
 import { useToast } from '../hooks/useToast';
 import { useSupabase } from '../lib/supabase/SupabaseProvider';
 import { getRankBadgeClass } from '../lib/utils';
@@ -44,7 +44,7 @@ interface Mentor {
 
 const SkillSwapPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user, isLoading } = useUser();
+  const { user, profile, isLoading } = useSimpleAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const supabase = useSupabase();
@@ -63,10 +63,10 @@ const SkillSwapPage: React.FC = () => {
       return;
     }
 
-    if (user && user.learning_goals?.length > 0) {
-      setLearningGoals([...user.learning_goals]);
+    if (profile && profile.learning_goals?.length > 0) {
+      setLearningGoals([...profile.learning_goals]);
     }
-  }, [user, isLoading, navigate]);
+  }, [user, profile, isLoading, navigate]);
 
   const addLearningGoal = () => {
     if (newGoal.trim() && !learningGoals.includes(newGoal.trim())) {
@@ -96,7 +96,7 @@ const SkillSwapPage: React.FC = () => {
       return;
     }
 
-    if (!user) {
+    if (!profile) {
       navigate('/auth/signup');
       return;
     }
@@ -111,7 +111,7 @@ const SkillSwapPage: React.FC = () => {
         .update({
           learning_goals: learningGoals,
         })
-        .eq('id', user.id);
+        .eq('id', profile.id);
 
       if (updateError) {
         throw updateError;
@@ -171,16 +171,16 @@ const SkillSwapPage: React.FC = () => {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username, skills, learning_goals, points, avatar_url')
-        .neq('id', user.id);
+        .neq('id', profile.id);
 
       if (profilesError) throw profilesError;
 
-      const userMatches = profilesData?.map(profile => {
+      const userMatches = profilesData?.map(profileData => {
         let matchScore = 0;
         
         // Check if their skills match our learning goals
         for (const goal of learningGoals) {
-          if (profile.skills?.some((skill: string) => 
+          if (profileData.skills?.some((skill: string) => 
             skill.toLowerCase().includes(goal.toLowerCase()) ||
             goal.toLowerCase().includes(skill.toLowerCase())
           )) {
@@ -189,15 +189,15 @@ const SkillSwapPage: React.FC = () => {
         }
         
         return {
-          ...profile,
+          ...profileData,
           matchScore,
-          rank: profile.points >= 1601 ? 'cosmic_sage' :
-                profile.points >= 1201 ? 'galactic_guide' :
-                profile.points >= 801 ? 'comet_crafter' :
-                profile.points >= 501 ? 'astral_apprentice' :
-                profile.points >= 251 ? 'nebula_novice' : 'starspark'
+          rank: profileData.points >= 1601 ? 'cosmic_sage' :
+                profileData.points >= 1201 ? 'galactic_guide' :
+                profileData.points >= 801 ? 'comet_crafter' :
+                profileData.points >= 501 ? 'astral_apprentice' :
+                profileData.points >= 251 ? 'nebula_novice' : 'starspark'
         };
-      }).filter(profile => profile.matchScore > 0)
+      }).filter(profileData => profileData.matchScore > 0)
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, 5) || [];
 
@@ -261,7 +261,7 @@ const SkillSwapPage: React.FC = () => {
       const { error } = await supabase
         .from('matches')
         .insert({
-          user_id: user?.id,
+          user_id: profile?.id,
           matched_user_id: matchId,
           status: 'pending'
         });
