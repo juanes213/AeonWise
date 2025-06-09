@@ -122,7 +122,7 @@ const SkillSwapPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          text, 
+          cvText: text, 
           userId: user?.id 
         }),
       });
