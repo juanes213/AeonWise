@@ -39,7 +39,7 @@ function App() {
                     <SimpleNavbar />
                     <main className="flex-grow">
                       <Routes>
-                        <Route path="/" element={<HomePage />} />
+                        <Route path="/\" element={<HomePage />} />
                         <Route path="/skill-swap" element={<SkillSwapPage />} />
                         <Route path="/mentorship" element={<MentorshipPage />} />
                         <Route path="/courses" element={<CoursesPage />} />
