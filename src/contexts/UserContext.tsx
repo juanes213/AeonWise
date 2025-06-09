@@ -77,9 +77,47 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
+    const clearAuthStorage = () => {
+      // Clear all possible Supabase auth storage keys
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes('supabase') || key.includes('auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
+    };
+
     const initializeUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Clear any invalid tokens first
+        const storedSession = localStorage.getItem('sb-sgfqjuxymauyesxqxdej-auth-token');
+        if (storedSession) {
+          try {
+            const parsedSession = JSON.parse(storedSession);
+            if (!parsedSession.access_token || !parsedSession.refresh_token) {
+              clearAuthStorage();
+              await supabase.auth.signOut();
+            }
+          } catch (e) {
+            clearAuthStorage();
+            await supabase.auth.signOut();
+          }
+        }
+
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('Auth session error:', error);
+          // Clear invalid session immediately
+          clearAuthStorage();
+          await supabase.auth.signOut();
+          if (mounted) {
+            setUser(null);
+            setInitialized(true);
+            setIsLoading(false);
+          }
+          return;
+        }
         
         if (session?.user && mounted) {
           const { data: profile, error } = await supabase
@@ -97,6 +135,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Error initializing user:', error);
+        // Clear storage on any initialization error
+        clearAuthStorage();
+        await supabase.auth.signOut();
+        if (mounted) {
+          setUser(null);
+          setInitialized(true);
+          setIsLoading(false);
+        }
       } finally {
         if (mounted) {
           setInitialized(true);
@@ -182,6 +228,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, username: string) => {
     try {
       setIsLoading(true);
+      
+      // First, create the auth user
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -193,6 +241,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (data.user) {
+        // Create the profile immediately after user creation
         const newProfile = {
           id: data.user.id,
           email,
@@ -203,22 +252,30 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           bio: '',
         };
 
-        const { error: profileError } = await supabase
+        const { data: createdProfile, error: profileError } = await supabase
           .from('profiles')
-          .insert([newProfile]);
+          .insert([newProfile])
+          .select()
+          .single();
         
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          throw new Error(`Failed to create profile: ${profileError.message}`);
+        }
 
-        setUser({
-          ...newProfile,
-          rank: 'starspark',
-          created_at: new Date().toISOString()
-        });
+        // Set the user immediately with the created profile
+        const userProfile = {
+          ...createdProfile,
+          rank: 'starspark' as UserRank,
+          created_at: createdProfile.created_at || new Date().toISOString()
+        };
+
+        setUser(userProfile);
 
         return { error: null };
       }
 
-      throw new Error('No user data returned');
+      throw new Error('No user data returned from signup');
     } catch (error) {
       console.error('Error signing up:', error);
       return { error };
@@ -232,6 +289,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       await supabase.auth.signOut();
       setUser(null);
+      // Clear all auth-related storage
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes('supabase') || key.includes('auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {

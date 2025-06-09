@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useUser } from '../../contexts/UserContext';
 import { useToast } from '../../hooks/useToast';
 
 interface FormData {
@@ -15,7 +15,7 @@ interface FormData {
 
 const OnboardingQuestionnaire: React.FC = () => {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp } = useUser();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState<FormData>({
@@ -99,8 +99,11 @@ const OnboardingQuestionnaire: React.FC = () => {
     setLoading(true);
     
     try {
+      console.log('Starting signup process...');
       const { error } = await signUp(formData.email, formData.password, formData.username);
+      
       if (error) {
+        console.error('Signup error:', error);
         throw error;
       }
       
@@ -110,6 +113,8 @@ const OnboardingQuestionnaire: React.FC = () => {
         username: formData.username,
         email: formData.email,
       }));
+      
+      console.log('Signup successful, navigating to profile setup...');
       
       toast({
         title: 'Account Created!',
@@ -121,7 +126,7 @@ const OnboardingQuestionnaire: React.FC = () => {
       console.error('Signup error:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create account',
+        description: error.message || 'Failed to create account. Please try again.',
         variant: 'destructive',
       });
     } finally {
