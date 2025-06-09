@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
 
 interface FormData {
@@ -14,6 +15,7 @@ interface FormData {
 
 const OnboardingQuestionnaire: React.FC = () => {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState<FormData>({
@@ -97,26 +99,32 @@ const OnboardingQuestionnaire: React.FC = () => {
     setLoading(true);
     
     try {
-      // Store account data in localStorage instead of creating the account immediately
-      localStorage.setItem('onboarding_account', JSON.stringify({
+      // Create the user account with Supabase Auth
+      const { error } = await signUp(formData.email, formData.password, formData.username);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Store additional info for the profile step
+      localStorage.setItem('onboarding_user_info', JSON.stringify({
         fullName: formData.fullName,
         username: formData.username,
         email: formData.email,
-        password: formData.password,
         timestamp: new Date().toISOString()
       }));
       
       toast({
-        title: 'Information Saved!',
-        description: 'Let\'s continue building your professional profile.',
+        title: 'Account Created!',
+        description: 'Now let\'s build your professional profile.',
       });
       
       navigate('/onboarding/profile');
     } catch (error: any) {
-      console.error('Error saving account data:', error);
+      console.error('Error creating account:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save account information. Please try again.',
+        description: error.message || 'Failed to create account. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -135,7 +143,7 @@ const OnboardingQuestionnaire: React.FC = () => {
         <div className="cosmos-card p-8">
           <div className="text-center mb-8">
             <Sparkles className="h-12 w-12 text-cosmic-gold-400 mx-auto mb-4" />
-            <h1 className="text-3xl font-display mb-2">Create Your Cosmic Profile</h1>
+            <h1 className="text-3xl font-display mb-2">Create Your Account</h1>
             <p className="text-gray-400">
               Join the universe of knowledge seekers and wisdom sharers
             </p>
@@ -276,16 +284,28 @@ const OnboardingQuestionnaire: React.FC = () => {
               {loading ? (
                 <>
                   <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                  Saving your information...
+                  Creating your account...
                 </>
               ) : (
                 <>
-                  Continue to Profile Setup
+                  Create Account & Continue
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
             </button>
           </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-400">
+              Already have an account?{' '}
+              <a
+                href="/auth/signin"
+                className="text-cosmic-purple-400 hover:text-cosmic-purple-300 transition-colors"
+              >
+                Sign in here
+              </a>
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>
