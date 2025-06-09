@@ -29,7 +29,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
 
     const clearAuthStorage = () => {
-      // Clear all possible Supabase auth storage keys
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
         if (key.includes('supabase') || key.includes('auth-token')) {
@@ -40,7 +39,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initializeAuth = async () => {
       try {
-        // Clear any invalid tokens first
         const storedSession = localStorage.getItem('sb-sgfqjuxymauyesxqxdej-auth-token');
         if (storedSession) {
           try {
@@ -56,10 +54,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
-          console.warn('Auth session error:', error);
-          // Clear invalid session immediately
           clearAuthStorage();
           await supabase.auth.signOut();
           if (mounted) {
@@ -69,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return;
         }
-        
+
         if (mounted) {
           setUser(session?.user ?? null);
           setInitialized(true);
@@ -77,7 +73,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        // Clear storage on any initialization error
         clearAuthStorage();
         await supabase.auth.signOut();
         if (mounted) {
@@ -95,14 +90,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Auth state change:', event, session?.user?.id);
 
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(session?.user ?? null);
         setLoading(false);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
-        setLoading(false);
-      } else if (event === 'TOKEN_REFRESHED') {
-        setUser(session?.user ?? null);
         setLoading(false);
       }
     });
@@ -117,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      
+
       if (error) throw error;
       setUser(data.user);
       return { error: null };
@@ -135,12 +127,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: { username }
-        }
       });
-      
-      if (error) throw error;
+
+      if (error || !data.user) throw error;
+
+      // Insert into profiles table
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        email,
+        username,
+      });
+
+      if (profileError) throw profileError;
+
       setUser(data.user);
       return { error: null };
     } catch (error) {
@@ -156,7 +155,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       await supabase.auth.signOut();
       setUser(null);
-      // Clear all auth-related storage
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
         if (key.includes('supabase') || key.includes('auth-token')) {
@@ -170,7 +168,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Don't render children until auth is initialized
   if (!initialized) {
     return null;
   }
