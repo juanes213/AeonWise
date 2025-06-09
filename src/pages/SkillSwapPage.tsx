@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Sparkles, Search, UserPlus, ArrowRight, Loader2, Upload, FileText } from 'lucide-react';
+import { Sparkles, Search, UserPlus, ArrowRight, Loader2, Upload, FileText, Plus, X } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useToast } from '../hooks/useToast';
 import { useSupabase } from '../lib/supabase/SupabaseProvider';
@@ -26,8 +26,10 @@ const SkillSwapPage: React.FC = () => {
   const { toast } = useToast();
   const supabase = useSupabase();
   
-  const [skillsInput, setSkillsInput] = useState('');
-  const [learningInput, setLearningInput] = useState('');
+  const [skills, setSkills] = useState<string[]>([]);
+  const [learningGoals, setLearningGoals] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState('');
+  const [newGoal, setNewGoal] = useState('');
   const [matches, setMatches] = useState<MatchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showMatches, setShowMatches] = useState(false);
@@ -45,11 +47,11 @@ const SkillSwapPage: React.FC = () => {
 
       if (mounted && user) {
         if (user.skills?.length > 0) {
-          setSkillsInput(user.skills.join(', '));
+          setSkills([...user.skills]);
         }
         
         if (user.learning_goals?.length > 0) {
-          setLearningInput(user.learning_goals.join(', '));
+          setLearningGoals([...user.learning_goals]);
         }
       }
     };
@@ -60,6 +62,39 @@ const SkillSwapPage: React.FC = () => {
       mounted = false;
     };
   }, [user, isLoading, navigate]);
+
+  const addSkill = () => {
+    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
+      setSkills([...skills, newSkill.trim()]);
+      setNewSkill('');
+    }
+  };
+
+  const removeSkill = (index: number) => {
+    setSkills(skills.filter((_, i) => i !== index));
+  };
+
+  const addLearningGoal = () => {
+    if (newGoal.trim() && !learningGoals.includes(newGoal.trim())) {
+      setLearningGoals([...learningGoals, newGoal.trim()]);
+      setNewGoal('');
+    }
+  };
+
+  const removeLearningGoal = (index: number) => {
+    setLearningGoals(learningGoals.filter((_, i) => i !== index));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent, type: 'skill' | 'goal') => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (type === 'skill') {
+        addSkill();
+      } else {
+        addLearningGoal();
+      }
+    }
+  };
 
   const handleCvUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -98,9 +133,15 @@ const SkillSwapPage: React.FC = () => {
 
       const data = await response.json();
       
-      // Update the input fields with extracted skills
+      // Update the skills with extracted skills
       if (data.analysis.skills.length > 0) {
-        setSkillsInput(data.analysis.skills.join(', '));
+        const newSkills = [...skills];
+        data.analysis.skills.forEach((skill: string) => {
+          if (!newSkills.includes(skill)) {
+            newSkills.push(skill);
+          }
+        });
+        setSkills(newSkills);
       }
 
       toast({
@@ -120,34 +161,11 @@ const SkillSwapPage: React.FC = () => {
     }
   };
 
-  const extractSkillsWithAI = async (text: string) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-skills`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to extract skills');
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error extracting skills:', error);
-      return null;
-    }
-  };
-
   const findMatches = async () => {
-    if (!skillsInput.trim() || !learningInput.trim()) {
+    if (skills.length === 0 || learningGoals.length === 0) {
       toast({
-        title: 'Input Required',
-        description: 'Please enter both your skills and learning goals',
+        title: 'Skills Required',
+        description: 'Please add at least one skill and one learning goal',
         variant: 'destructive',
       });
       return;
@@ -162,19 +180,12 @@ const SkillSwapPage: React.FC = () => {
     setShowMatches(false);
 
     try {
-      // Extract and clean skills using AI
-      const skillsData = await extractSkillsWithAI(skillsInput);
-      const learningData = await extractSkillsWithAI(learningInput);
-
-      const skills = skillsData?.teach || skillsInput.split(',').map(s => s.trim().replace(/^I know\s+/i, '').replace(/^I can\s+/i, '')).filter(s => s);
-      const learning_goals = learningData?.learn || learningInput.split(',').map(g => g.trim().replace(/^I want to learn\s+/i, '').replace(/^I need\s+/i, '')).filter(g => g);
-
-      // Update user profile with cleaned skills
+      // Update user profile with skills and learning goals
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           skills,
-          learning_goals,
+          learning_goals: learningGoals,
         })
         .eq('id', user.id);
 
@@ -192,7 +203,7 @@ const SkillSwapPage: React.FC = () => {
         body: JSON.stringify({ 
           user_id: user.id,
           skills, 
-          learning_goals 
+          learning_goals: learningGoals 
         }),
       });
 
@@ -322,42 +333,104 @@ const SkillSwapPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Skills Section */}
           <div className="mb-8">
             <h2 className="text-xl font-display mb-6 flex items-center">
               <Sparkles className="h-5 w-5 text-cosmic-gold-400 mr-2" />
               {t('skillSwap.yourSkills')}
             </h2>
-            <p className="text-white/70 mb-3">
-              What skills, knowledge, or expertise can you share with others?
+            <p className="text-white/70 mb-4">
+              Add the skills, knowledge, or expertise you can share with others
             </p>
-            <textarea
-              value={skillsInput}
-              onChange={(e) => setSkillsInput(e.target.value)}
-              placeholder="e.g., Python, Machine Learning, Web Development, Graphic Design..."
-              className="w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500 min-h-[100px]"
-            />
+            
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, 'skill')}
+                className="flex-1 bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
+                placeholder="e.g., Python, Graphic Design, Marketing..."
+              />
+              <button
+                type="button"
+                onClick={addSkill}
+                className="btn-secondary px-4 py-2"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              {skills.map((skill, index) => (
+                <div
+                  key={index}
+                  className="inline-flex items-center bg-cosmic-purple-900/50 rounded-md px-3 py-1 text-sm"
+                >
+                  {skill}
+                  <button
+                    type="button"
+                    onClick={() => removeSkill(index)}
+                    className="ml-2 text-white/70 hover:text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
+          {/* Learning Goals Section */}
           <div className="mb-8">
             <h2 className="text-xl font-display mb-6 flex items-center">
               <Search className="h-5 w-5 text-cosmic-gold-400 mr-2" />
               {t('skillSwap.learningGoals')}
             </h2>
-            <p className="text-white/70 mb-3">
-              What skills or knowledge are you interested in learning?
+            <p className="text-white/70 mb-4">
+              Add the skills or knowledge you're interested in learning
             </p>
-            <textarea
-              value={learningInput}
-              onChange={(e) => setLearningInput(e.target.value)}
-              placeholder="e.g., Web Development, Mobile Development, Data Science, Public Speaking..."
-              className="w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500 min-h-[100px]"
-            />
+            
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={newGoal}
+                onChange={(e) => setNewGoal(e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, 'goal')}
+                className="flex-1 bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
+                placeholder="e.g., Web Development, Machine Learning, Public Speaking..."
+              />
+              <button
+                type="button"
+                onClick={addLearningGoal}
+                className="btn-secondary px-4 py-2"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              {learningGoals.map((goal, index) => (
+                <div
+                  key={index}
+                  className="inline-flex items-center bg-cosmic-blue-900/50 rounded-md px-3 py-1 text-sm"
+                >
+                  {goal}
+                  <button
+                    type="button"
+                    onClick={() => removeLearningGoal(index)}
+                    className="ml-2 text-white/70 hover:text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="text-center">
             <button
               onClick={findMatches}
-              disabled={isSearching}
+              disabled={isSearching || skills.length === 0 || learningGoals.length === 0}
               className="btn-primary"
             >
               {isSearching ? (
@@ -416,7 +489,7 @@ const SkillSwapPage: React.FC = () => {
                             <h3 className="text-xl font-display">{match.username}</h3>
                             <div className="mt-1">
                               <span className={`badge ${getRankBadgeClass(match.rank)}`}>
-                                {t(`ranks.${match.rank}`)}
+                                {match.rank.replace('_', ' ')}
                               </span>
                             </div>
                           </div>

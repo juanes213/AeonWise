@@ -10,10 +10,10 @@ const OnboardingSkills: React.FC = () => {
   const { user, updateProfile } = useUser();
   const { toast } = useToast();
   
-  const [skillsInput, setSkillsInput] = useState('');
-  const [learningInput, setLearningInput] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [learningGoals, setLearningGoals] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState('');
+  const [newGoal, setNewGoal] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -23,9 +23,9 @@ const OnboardingSkills: React.FC = () => {
   }, [user, navigate]);
 
   const addSkill = () => {
-    if (skillsInput.trim() && !skills.includes(skillsInput.trim())) {
-      setSkills([...skills, skillsInput.trim()]);
-      setSkillsInput('');
+    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
+      setSkills([...skills, newSkill.trim()]);
+      setNewSkill('');
     }
   };
 
@@ -34,9 +34,9 @@ const OnboardingSkills: React.FC = () => {
   };
 
   const addLearningGoal = () => {
-    if (learningInput.trim() && !learningGoals.includes(learningInput.trim())) {
-      setLearningGoals([...learningGoals, learningInput.trim()]);
-      setLearningInput('');
+    if (newGoal.trim() && !learningGoals.includes(newGoal.trim())) {
+      setLearningGoals([...learningGoals, newGoal.trim()]);
+      setNewGoal('');
     }
   };
 
@@ -134,8 +134,8 @@ const OnboardingSkills: React.FC = () => {
               <div className="flex gap-2 mb-4">
                 <input
                   type="text"
-                  value={skillsInput}
-                  onChange={(e) => setSkillsInput(e.target.value)}
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
                   onKeyPress={(e) => handleKeyPress(e, 'skill')}
                   className="flex-1 bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
                   placeholder="e.g., Python, Graphic Design, Marketing..."
@@ -184,8 +184,8 @@ const OnboardingSkills: React.FC = () => {
               <div className="flex gap-2 mb-4">
                 <input
                   type="text"
-                  value={learningInput}
-                  onChange={(e) => setLearningInput(e.target.value)}
+                  value={newGoal}
+                  onChange={(e) => setNewGoal(e.target.value)}
                   onKeyPress={(e) => handleKeyPress(e, 'goal')}
                   className="flex-1 bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
                   placeholder="e.g., Machine Learning, Public Speaking, Photography..."
