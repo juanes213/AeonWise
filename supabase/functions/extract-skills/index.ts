@@ -33,25 +33,25 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an AI assistant for AeonWise, a skill-sharing platform. Extract teachable skills and learning goals from the input text, and generate a logical learning path for each goal. Return a JSON object with three keys: "teach" (array of skills the user can teach), "learn" (array of skills the user wants to learn), and "path" (array of steps for the first learning goal). Validate inputs to ensure clarity and specificity. Handle ambiguous inputs by selecting the most relevant skills or goals.
+            content: `You are an AI assistant for AeonWise, a skill-sharing platform. Extract teachable skills and learning goals from the input text, and generate a logical learning path for each goal. Return a JSON object with three keys: "teach" (array of skills the user can teach), "learn" (array of skills the user wants to learn), and "path" (array of steps for the first learning goal). 
+
+IMPORTANT RULES:
+- Clean up skills by removing phrases like "I know", "I can", "I am good at"
+- Extract only the core skill names (e.g., "I know Python" → "Python")
+- For learning goals, remove phrases like "I want to learn", "I need to learn"
+- Skills and goals must be specific and concise
+- Return valid JSON, even for invalid inputs (use empty arrays if no skills/goals are detected)
 
 Example:
-- Input: "I know Python, want to learn web development"
-- Output: { "teach": ["Python"], "learn": ["Web Development"], "path": ["HTML", "CSS", "JavaScript"] }
-
-Rules:
-- Skills and goals must be specific (e.g., "coding" → "Python" if context suggests it).
-- If input is vague (e.g., "I’m good at tech"), infer likely skills (e.g., ["Technology"]) and note ambiguity.
-- Learning paths should be concise (3-5 steps) and practical.
-- Return valid JSON, even for invalid inputs (use empty arrays if no skills/goals are detected).
-- Flag ambiguous inputs with a "notes" key in the output.`
+- Input: "I know Python, machine learning, I want to learn web development"
+- Output: { "teach": ["Python", "Machine Learning"], "learn": ["Web Development"], "path": ["HTML", "CSS", "JavaScript", "React"] }`
           },
           {
             role: 'user',
-            content: `Extract skills, goals, and generate a learning path for: "${userInput}"`
+            content: `Extract skills, goals, and generate a learning path for: "${text}"`
           }
         ],
-        temperature: 0.5,
+        temperature: 0.3,
         max_tokens: 500
       })
     });
@@ -61,7 +61,30 @@ Rules:
     }
 
     const groqResponse = await response.json();
-    const result = JSON.parse(groqResponse.choices[0].message.content);
+    let result;
+    
+    try {
+      result = JSON.parse(groqResponse.choices[0].message.content);
+    } catch (parseError) {
+      // Fallback parsing if JSON is malformed
+      const content = groqResponse.choices[0].message.content;
+      result = {
+        teach: [],
+        learn: [],
+        path: []
+      };
+      
+      // Simple regex extraction as fallback
+      const teachMatch = content.match(/"teach":\s*\[(.*?)\]/);
+      const learnMatch = content.match(/"learn":\s*\[(.*?)\]/);
+      
+      if (teachMatch) {
+        result.teach = teachMatch[1].split(',').map((s: string) => s.trim().replace(/"/g, ''));
+      }
+      if (learnMatch) {
+        result.learn = learnMatch[1].split(',').map((s: string) => s.trim().replace(/"/g, ''));
+      }
+    }
 
     // Store in Supabase if user_id is provided
     if (req.headers.get('user-id')) {
@@ -79,7 +102,7 @@ Rules:
         .eq('id', req.headers.get('user-id'));
 
       if (updateError) {
-        throw updateError;
+        console.error('Error updating profile:', updateError);
       }
     }
 

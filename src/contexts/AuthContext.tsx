@@ -30,22 +30,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initializeAuth = async () => {
       try {
+        // Clear any invalid tokens first
+        const storedSession = localStorage.getItem('sb-sgfqjuxymauyesxqxdej-auth-token');
+        if (storedSession) {
+          try {
+            const parsedSession = JSON.parse(storedSession);
+            if (!parsedSession.access_token || !parsedSession.refresh_token) {
+              localStorage.removeItem('sb-sgfqjuxymauyesxqxdej-auth-token');
+              await supabase.auth.signOut();
+            }
+          } catch (e) {
+            localStorage.removeItem('sb-sgfqjuxymauyesxqxdej-auth-token');
+            await supabase.auth.signOut();
+          }
+        }
+
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          // Check if the error is related to invalid refresh token
-          if (error.message?.includes('Invalid Refresh Token') || 
-              error.message?.includes('Refresh Token Not Found')) {
-            // Clear the invalid session by signing out
-            await supabase.auth.signOut();
-            if (mounted) {
-              setUser(null);
-              setInitialized(true);
-              setLoading(false);
-            }
-            return;
+          console.warn('Auth session error:', error);
+          // Clear invalid session
+          await supabase.auth.signOut();
+          if (mounted) {
+            setUser(null);
+            setInitialized(true);
+            setLoading(false);
           }
-          throw error;
+          return;
         }
         
         if (mounted) {
@@ -68,10 +79,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
+      console.log('Auth state change:', event, session?.user?.id);
+
       if (event === 'SIGNED_IN') {
         setUser(session?.user ?? null);
+        setLoading(false);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        setLoading(false);
+      } else if (event === 'TOKEN_REFRESHED') {
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
     });
 
@@ -124,6 +142,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       await supabase.auth.signOut();
       setUser(null);
+      // Clear any stored session data
+      localStorage.removeItem('sb-sgfqjuxymauyesxqxdej-auth-token');
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {

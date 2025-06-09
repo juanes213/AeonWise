@@ -22,7 +22,6 @@ import RankingPage from './pages/RankingPage';
 import TestPage from './pages/TestPage';
 import NotFoundPage from './pages/NotFoundPage';
 import StarfieldBackground from './components/effects/StarfieldBackground';
-import ProtectedRoute from './components/auth/ProtectedRoute';
 import AuthGuard from './components/auth/AuthGuard';
 
 function App() {
@@ -50,7 +49,7 @@ function App() {
                       <Navbar />
                       <main className="flex-grow">
                         <Routes>
-                          <Route path="/\" element={<HomePage />} />
+                          <Route path="/" element={<HomePage />} />
                           <Route path="/skill-swap" element={<SkillSwapPage />} />
                           <Route path="/mentorship" element={<MentorshipPage />} />
                           <Route path="/courses" element={<CoursesPage />} />

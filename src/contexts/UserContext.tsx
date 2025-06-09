@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSupabase } from '../lib/supabase/SupabaseProvider';
 
-export type UserRank = 'novice' | 'apprentice' | 'journeyman' | 'expert' | 'master';
+export type UserRank = 'starspark' | 'nebula_novice' | 'astral_apprentice' | 'comet_crafter' | 'galactic_guide' | 'cosmic_sage';
 
 export interface UserProfile {
   id: string;
@@ -23,6 +23,7 @@ interface UserContextType {
   signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: any }>;
+  refreshUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -36,11 +37,12 @@ export const useUser = () => {
 };
 
 const calculateRank = (points: number): UserRank => {
-  if (points >= 801) return 'master';
-  if (points >= 601) return 'expert';
-  if (points >= 401) return 'journeyman';
-  if (points >= 201) return 'apprentice';
-  return 'novice';
+  if (points >= 1601) return 'cosmic_sage';
+  if (points >= 1201) return 'galactic_guide';
+  if (points >= 801) return 'comet_crafter';
+  if (points >= 501) return 'astral_apprentice';
+  if (points >= 251) return 'nebula_novice';
+  return 'starspark';
 };
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -48,6 +50,29 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+
+  const refreshUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (!error && profile) {
+          setUser({
+            ...profile,
+            rank: calculateRank(profile.points)
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -85,6 +110,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
+      console.log('User context auth state change:', event);
+
       if (event === 'SIGNED_IN' && session) {
         setIsLoading(true);
         try {
@@ -107,6 +134,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        setIsLoading(false);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        // Refresh user data when token is refreshed
+        await refreshUser();
+        setIsLoading(false);
       }
     });
 
@@ -179,7 +211,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setUser({
           ...newProfile,
-          rank: 'novice',
+          rank: 'starspark',
           created_at: new Date().toISOString()
         });
 
@@ -221,11 +253,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) throw error;
 
-      setUser({
+      const updatedUser = {
         ...user,
         ...updates,
         rank: calculateRank(updates.points !== undefined ? updates.points : user.points)
-      });
+      };
+      
+      setUser(updatedUser);
       
       return { error: null };
     } catch (error) {
@@ -248,7 +282,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn, 
       signUp, 
       signOut,
-      updateProfile
+      updateProfile,
+      refreshUser
     }}>
       {children}
     </UserContext.Provider>

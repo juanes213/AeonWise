@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Sparkles, Search, UserPlus, ArrowRight, Loader2 } from 'lucide-react';
+import { Sparkles, Search, UserPlus, ArrowRight, Loader2, Upload, FileText } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useToast } from '../hooks/useToast';
 import { useSupabase } from '../lib/supabase/SupabaseProvider';
@@ -16,6 +16,7 @@ interface MatchUser {
   rank: string;
   points: number;
   avatar_url?: string;
+  matchScore: number;
 }
 
 const SkillSwapPage: React.FC = () => {
@@ -30,13 +31,15 @@ const SkillSwapPage: React.FC = () => {
   const [matches, setMatches] = useState<MatchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showMatches, setShowMatches] = useState(false);
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
     const initializeInputs = () => {
       if (!isLoading && !user) {
-        navigate('/auth/signup');
+        navigate('/auth/signin');
         return;
       }
 
@@ -58,6 +61,88 @@ const SkillSwapPage: React.FC = () => {
     };
   }, [user, isLoading, navigate]);
 
+  const handleCvUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.type.includes('text')) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please upload a PDF or text file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCvFile(file);
+    setIsAnalyzing(true);
+
+    try {
+      const text = await file.text();
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-profile`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          text, 
+          userId: user?.id 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze CV');
+      }
+
+      const data = await response.json();
+      
+      // Update the input fields with extracted skills
+      if (data.analysis.skills.length > 0) {
+        setSkillsInput(data.analysis.skills.join(', '));
+      }
+
+      toast({
+        title: 'CV Analyzed Successfully',
+        description: `Found ${data.analysis.skills.length} skills and awarded ${data.points} points!`,
+      });
+
+    } catch (error) {
+      console.error('Error analyzing CV:', error);
+      toast({
+        title: 'Analysis Failed',
+        description: 'Failed to analyze CV. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const extractSkillsWithAI = async (text: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-skills`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to extract skills');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error extracting skills:', error);
+      return null;
+    }
+  };
+
   const findMatches = async () => {
     if (!skillsInput.trim() || !learningInput.trim()) {
       toast({
@@ -77,9 +162,14 @@ const SkillSwapPage: React.FC = () => {
     setShowMatches(false);
 
     try {
-      const skills = skillsInput.split(',').map(s => s.trim()).filter(s => s);
-      const learning_goals = learningInput.split(',').map(g => g.trim()).filter(g => g);
+      // Extract and clean skills using AI
+      const skillsData = await extractSkillsWithAI(skillsInput);
+      const learningData = await extractSkillsWithAI(learningInput);
 
+      const skills = skillsData?.teach || skillsInput.split(',').map(s => s.trim().replace(/^I know\s+/i, '').replace(/^I can\s+/i, '')).filter(s => s);
+      const learning_goals = learningData?.learn || learningInput.split(',').map(g => g.trim().replace(/^I want to learn\s+/i, '').replace(/^I need\s+/i, '')).filter(g => g);
+
+      // Update user profile with cleaned skills
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -92,87 +182,76 @@ const SkillSwapPage: React.FC = () => {
         throw updateError;
       }
 
-      setTimeout(async () => {
-        try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('id, username, skills, learning_goals, points, avatar_url')
-            .neq('id', user.id);
+      // Find matches using the edge function
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/match-users`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          user_id: user.id,
+          skills, 
+          learning_goals 
+        }),
+      });
 
-          if (error) {
-            throw error;
-          }
+      if (!response.ok) {
+        throw new Error('Failed to find matches');
+      }
 
-          const potentialMatches = data.map(profile => {
-            let matchScore = 0;
-            
-            for (const skill of skills) {
-              if (profile.learning_goals.some(goal => 
-                goal.toLowerCase().includes(skill.toLowerCase())
-              )) {
-                matchScore += 1;
-              }
-            }
-            
-            for (const goal of learning_goals) {
-              if (profile.skills.some(skill => 
-                skill.toLowerCase().includes(goal.toLowerCase())
-              )) {
-                matchScore += 1;
-              }
-            }
-            
-            return {
-              ...profile,
-              matchScore,
-              rank: profile.points >= 801 ? 'master' :
-                    profile.points >= 601 ? 'expert' :
-                    profile.points >= 401 ? 'journeyman' :
-                    profile.points >= 201 ? 'apprentice' : 'novice'
-            };
-          });
-          
-          const matchedUsers = potentialMatches
-            .filter(profile => profile.matchScore > 0)
-            .sort((a, b) => b.matchScore - a.matchScore)
-            .slice(0, 5);
-          
-          setMatches(matchedUsers);
-          setShowMatches(true);
-          
-          if (matchedUsers.length === 0) {
-            toast({
-              title: 'No Matches Found',
-              description: 'Try different skills or learning goals to find matches',
-            });
-          }
-        } catch (error) {
-          console.error('Error finding matches:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to find matches. Please try again.',
-            variant: 'destructive',
-          });
-        } finally {
-          setIsSearching(false);
-        }
-      }, 2000);
+      const data = await response.json();
+      setMatches(data.matches || []);
+      setShowMatches(true);
+      
+      if (data.matches.length === 0) {
+        toast({
+          title: 'No Matches Found',
+          description: 'Try different skills or learning goals to find matches',
+        });
+      } else {
+        toast({
+          title: 'Matches Found!',
+          description: `Found ${data.matches.length} potential matches`,
+        });
+      }
+
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('Error finding matches:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update your profile. Please try again.',
+        description: 'Failed to find matches. Please try again.',
         variant: 'destructive',
       });
+    } finally {
       setIsSearching(false);
     }
   };
 
-  const initiateConnection = (matchId: string) => {
-    toast({
-      title: 'Connection Initiated',
-      description: 'A connection request has been sent!',
-    });
+  const initiateConnection = async (matchId: string) => {
+    try {
+      const { error } = await supabase
+        .from('matches')
+        .insert({
+          user_id: user?.id,
+          matched_user_id: matchId,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Connection Initiated',
+        description: 'A connection request has been sent!',
+      });
+    } catch (error) {
+      console.error('Error creating match:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send connection request',
+        variant: 'destructive',
+      });
+    }
   };
 
   const staggerContainer = {
@@ -213,6 +292,36 @@ const SkillSwapPage: React.FC = () => {
         </div>
 
         <div className="cosmos-card p-8 mb-12">
+          {/* CV Upload Section */}
+          <div className="mb-8 p-6 bg-cosmic-black/30 rounded-lg">
+            <h3 className="text-lg font-display mb-4 flex items-center">
+              <FileText className="h-5 w-5 text-cosmic-gold-400 mr-2" />
+              Upload Your CV (Optional)
+            </h3>
+            <p className="text-white/70 mb-4">
+              Upload your CV to automatically extract skills and earn points based on your experience
+            </p>
+            <div className="flex items-center gap-4">
+              <label className="btn-secondary cursor-pointer flex items-center">
+                <Upload className="h-4 w-4 mr-2" />
+                {cvFile ? cvFile.name : 'Choose CV File'}
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.doc,.docx"
+                  onChange={handleCvUpload}
+                  className="hidden"
+                  disabled={isAnalyzing}
+                />
+              </label>
+              {isAnalyzing && (
+                <div className="flex items-center text-cosmic-gold-400">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Analyzing CV...
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="mb-8">
             <h2 className="text-xl font-display mb-6 flex items-center">
               <Sparkles className="h-5 w-5 text-cosmic-gold-400 mr-2" />
@@ -224,7 +333,7 @@ const SkillSwapPage: React.FC = () => {
             <textarea
               value={skillsInput}
               onChange={(e) => setSkillsInput(e.target.value)}
-              placeholder={t('skillSwap.skillPlaceholder')}
+              placeholder="e.g., Python, Machine Learning, Web Development, Graphic Design..."
               className="w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500 min-h-[100px]"
             />
           </div>
@@ -240,7 +349,7 @@ const SkillSwapPage: React.FC = () => {
             <textarea
               value={learningInput}
               onChange={(e) => setLearningInput(e.target.value)}
-              placeholder={t('skillSwap.goalsPlaceholder')}
+              placeholder="e.g., Web Development, Mobile Development, Data Science, Public Speaking..."
               className="w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500 min-h-[100px]"
             />
           </div>
@@ -269,7 +378,7 @@ const SkillSwapPage: React.FC = () => {
         {showMatches && (
           <div>
             <h2 className="text-2xl font-display mb-8 text-center">
-              {t('skillSwap.matches.title')}
+              {t('skillSwap.matches.title')} ({matches.length} found)
             </h2>
 
             {matches.length === 0 ? (
@@ -290,24 +399,34 @@ const SkillSwapPage: React.FC = () => {
                     variants={itemVariant}
                   >
                     <div className="p-6">
-                      <div className="flex items-center mb-4">
-                        <div className="w-12 h-12 rounded-full overflow-hidden bg-cosmic-purple-800 flex items-center justify-center mr-4">
-                          {match.avatar_url ? (
-                            <img
-                              src={match.avatar_url}
-                              alt={match.username}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Sparkles className="h-6 w-6 text-cosmic-gold-400" />
-                          )}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-cosmic-purple-800 flex items-center justify-center mr-4">
+                            {match.avatar_url ? (
+                              <img
+                                src={match.avatar_url}
+                                alt={match.username}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Sparkles className="h-6 w-6 text-cosmic-gold-400" />
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-display">{match.username}</h3>
+                            <div className="mt-1">
+                              <span className={`badge ${getRankBadgeClass(match.rank)}`}>
+                                {t(`ranks.${match.rank}`)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-xl font-display">{match.username}</h3>
-                          <div className="mt-1">
-                            <span className={`badge ${getRankBadgeClass(match.rank)}`}>
-                              {t(`ranks.${match.rank}`)}
-                            </span>
+                        <div className="text-right">
+                          <div className="text-sm text-cosmic-gold-400">
+                            Match Score: {match.matchScore}
+                          </div>
+                          <div className="text-xs text-white/50">
+                            {match.points} points
                           </div>
                         </div>
                       </div>
@@ -317,7 +436,7 @@ const SkillSwapPage: React.FC = () => {
                           Can Teach:
                         </h4>
                         <div className="flex flex-wrap gap-2">
-                          {match.skills.map((skill, index) => (
+                          {match.skills.slice(0, 5).map((skill, index) => (
                             <span
                               key={index}
                               className="inline-block px-2 py-1 bg-cosmic-purple-900/50 rounded-md text-xs"
@@ -325,6 +444,11 @@ const SkillSwapPage: React.FC = () => {
                               {skill}
                             </span>
                           ))}
+                          {match.skills.length > 5 && (
+                            <span className="text-xs text-white/50">
+                              +{match.skills.length - 5} more
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -333,7 +457,7 @@ const SkillSwapPage: React.FC = () => {
                           Wants to Learn:
                         </h4>
                         <div className="flex flex-wrap gap-2">
-                          {match.learning_goals.map((goal, index) => (
+                          {match.learning_goals.slice(0, 5).map((goal, index) => (
                             <span
                               key={index}
                               className="inline-block px-2 py-1 bg-cosmic-blue-900/50 rounded-md text-xs"
@@ -341,6 +465,11 @@ const SkillSwapPage: React.FC = () => {
                               {goal}
                             </span>
                           ))}
+                          {match.learning_goals.length > 5 && (
+                            <span className="text-xs text-white/50">
+                              +{match.learning_goals.length - 5} more
+                            </span>
+                          )}
                         </div>
                       </div>
 
