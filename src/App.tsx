@@ -12,7 +12,7 @@ import HomePage from './pages/HomePage';
 import SignInPage from './pages/auth/SignInPage';
 import SignUpPage from './pages/auth/SignUpPage';
 import OnboardingQuestionnaire from './pages/onboarding/OnboardingQuestionnaire';
-import OnboardingSkills from './pages/onboarding/OnboardingSkills';
+import OnboardingProfile from './pages/onboarding/OnboardingProfile';
 import OnboardingRecommendations from './pages/onboarding/OnboardingRecommendations';
 import SkillSwapPage from './pages/SkillSwapPage';
 import MentorshipPage from './pages/MentorshipPage';
@@ -40,7 +40,7 @@ function App() {
                   
                   {/* Onboarding routes */}
                   <Route path="/onboarding/questionnaire" element={<OnboardingQuestionnaire />} />
-                  <Route path="/onboarding/skills" element={<OnboardingSkills />} />
+                  <Route path="/onboarding/profile" element={<OnboardingProfile />} />
                   <Route path="/onboarding/recommendations" element={<OnboardingRecommendations />} />
                   
                   {/* Protected main app routes */}

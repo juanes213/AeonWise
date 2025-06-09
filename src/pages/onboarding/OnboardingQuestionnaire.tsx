@@ -113,10 +113,10 @@ const OnboardingQuestionnaire: React.FC = () => {
       
       toast({
         title: 'Account Created!',
-        description: 'Welcome to AeonWise. Let\'s set up your skills profile.',
+        description: 'Welcome to AeonWise. Let\'s set up your professional profile.',
       });
       
-      navigate('/onboarding/skills');
+      navigate('/onboarding/profile');
     } catch (error: any) {
       console.error('Signup error:', error);
       toast({
@@ -285,7 +285,7 @@ const OnboardingQuestionnaire: React.FC = () => {
                 </>
               ) : (
                 <>
-                  Continue to Skills Setup
+                  Continue to Profile Setup
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
