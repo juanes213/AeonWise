@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
-import { useUser } from '../../contexts/UserContext';
 import { useToast } from '../../hooks/useToast';
 
 interface FormData {
@@ -15,7 +14,6 @@ interface FormData {
 
 const OnboardingQuestionnaire: React.FC = () => {
   const navigate = useNavigate();
-  const { signUp } = useUser();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState<FormData>({
@@ -99,34 +97,26 @@ const OnboardingQuestionnaire: React.FC = () => {
     setLoading(true);
     
     try {
-      console.log('Starting signup process...');
-      const { error } = await signUp(formData.email, formData.password, formData.username);
-      
-      if (error) {
-        console.error('Signup error:', error);
-        throw error;
-      }
-      
-      // Store additional data in localStorage for the next step
-      localStorage.setItem('onboarding_data', JSON.stringify({
+      // Store account data in localStorage instead of creating the account immediately
+      localStorage.setItem('onboarding_account', JSON.stringify({
         fullName: formData.fullName,
         username: formData.username,
         email: formData.email,
+        password: formData.password,
+        timestamp: new Date().toISOString()
       }));
       
-      console.log('Signup successful, navigating to profile setup...');
-      
       toast({
-        title: 'Account Created!',
-        description: 'Welcome to AeonWise. Let\'s set up your professional profile.',
+        title: 'Information Saved!',
+        description: 'Let\'s continue building your professional profile.',
       });
       
       navigate('/onboarding/profile');
     } catch (error: any) {
-      console.error('Signup error:', error);
+      console.error('Error saving account data:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create account. Please try again.',
+        description: 'Failed to save account information. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -286,7 +276,7 @@ const OnboardingQuestionnaire: React.FC = () => {
               {loading ? (
                 <>
                   <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                  Creating your cosmic profile...
+                  Saving your information...
                 </>
               ) : (
                 <>

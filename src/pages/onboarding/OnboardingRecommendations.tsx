@@ -46,7 +46,7 @@ interface Match {
 
 const OnboardingRecommendations: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { user, updateProfile } = useUser();
   const supabase = useSupabase();
   const { toast } = useToast();
   
@@ -55,30 +55,52 @@ const OnboardingRecommendations: React.FC = () => {
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [profileData, setProfileData] = useState<any>(null);
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth/signin');
-      return;
+      // User should be created by now, but if not, wait a bit
+      const timer = setTimeout(() => {
+        if (!user) {
+          toast({
+            title: 'Authentication Error',
+            description: 'Please complete the signup process again',
+            variant: 'destructive',
+          });
+          navigate('/onboarding/questionnaire');
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    } else {
+      loadRecommendations();
     }
-    
-    loadRecommendations();
-  }, [user, navigate]);
+  }, [user, navigate, toast]);
 
   const loadRecommendations = async () => {
     try {
       setLoading(true);
       
-      // Get stored skills data
-      const skillsData = localStorage.getItem('onboarding_skills');
-      if (!skillsData) {
-        navigate('/onboarding/skills');
+      // Get stored profile data
+      const storedProfileData = localStorage.getItem('onboarding_complete_profile');
+      if (!storedProfileData) {
+        navigate('/onboarding/questionnaire');
         return;
       }
       
-      const { skills, learningGoals } = JSON.parse(skillsData);
+      const parsedProfileData = JSON.parse(storedProfileData);
+      setProfileData(parsedProfileData);
       
-      // Load recommended courses based on learning goals
+      // Update the user's profile with all the collected data
+      if (user) {
+        await updateProfile({
+          skills: parsedProfileData.skills,
+          points: parsedProfileData.points,
+          bio: parsedProfileData.bio,
+        });
+      }
+      
+      // Load recommended courses
       const { data: coursesData, error: coursesError } = await supabase
         .from('courses')
         .select('*')
@@ -87,7 +109,7 @@ const OnboardingRecommendations: React.FC = () => {
       if (coursesError) throw coursesError;
       setCourses(coursesData || []);
       
-      // Load mentors based on learning goals
+      // Load mentors
       const { data: mentorsData, error: mentorsError } = await supabase
         .from('mentorship_profiles')
         .select(`
@@ -108,10 +130,11 @@ const OnboardingRecommendations: React.FC = () => {
         availability: mentor.availability,
         bio: mentor.bio,
         points: mentor.profiles.points,
-        rank: mentor.profiles.points >= 801 ? 'master' :
-              mentor.profiles.points >= 601 ? 'expert' :
-              mentor.profiles.points >= 401 ? 'journeyman' :
-              mentor.profiles.points >= 201 ? 'apprentice' : 'novice'
+        rank: mentor.profiles.points >= 1601 ? 'cosmic_sage' :
+              mentor.profiles.points >= 1201 ? 'galactic_guide' :
+              mentor.profiles.points >= 801 ? 'comet_crafter' :
+              mentor.profiles.points >= 501 ? 'astral_apprentice' :
+              mentor.profiles.points >= 251 ? 'nebula_novice' : 'starspark'
       })) || [];
       
       setMentors(formattedMentors);
@@ -120,24 +143,16 @@ const OnboardingRecommendations: React.FC = () => {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .neq('id', user.id);
+        .neq('id', user?.id);
       
       if (profilesError) throw profilesError;
       
       const potentialMatches = profilesData?.map(profile => {
         let matchScore = 0;
         
-        for (const skill of skills) {
-          if (profile.learning_goals.some((goal: string) => 
+        for (const skill of parsedProfileData.skills) {
+          if (profile.learning_goals?.some((goal: string) => 
             goal.toLowerCase().includes(skill.toLowerCase())
-          )) {
-            matchScore += 1;
-          }
-        }
-        
-        for (const goal of learningGoals) {
-          if (profile.skills.some((skill: string) => 
-            skill.toLowerCase().includes(goal.toLowerCase())
           )) {
             matchScore += 1;
           }
@@ -146,10 +161,11 @@ const OnboardingRecommendations: React.FC = () => {
         return {
           ...profile,
           matchScore,
-          rank: profile.points >= 801 ? 'master' :
-                profile.points >= 601 ? 'expert' :
-                profile.points >= 401 ? 'journeyman' :
-                profile.points >= 201 ? 'apprentice' : 'novice'
+          rank: profile.points >= 1601 ? 'cosmic_sage' :
+                profile.points >= 1201 ? 'galactic_guide' :
+                profile.points >= 801 ? 'comet_crafter' :
+                profile.points >= 501 ? 'astral_apprentice' :
+                profile.points >= 251 ? 'nebula_novice' : 'starspark'
         };
       }).filter(profile => profile.matchScore > 0)
         .sort((a, b) => b.matchScore - a.matchScore)
@@ -179,9 +195,9 @@ const OnboardingRecommendations: React.FC = () => {
   };
 
   const goToMainApp = () => {
-    // Clear onboarding data
-    localStorage.removeItem('onboarding_data');
-    localStorage.removeItem('onboarding_skills');
+    // Clear all onboarding data
+    localStorage.removeItem('onboarding_account');
+    localStorage.removeItem('onboarding_complete_profile');
     
     toast({
       title: 'Welcome to AeonWise!',
@@ -194,7 +210,10 @@ const OnboardingRecommendations: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin mx-auto mb-4" />
+          <p className="text-white/70">Setting up your cosmic profile...</p>
+        </div>
       </div>
     );
   }
@@ -211,9 +230,17 @@ const OnboardingRecommendations: React.FC = () => {
           <Sparkles className="h-12 w-12 text-cosmic-gold-400 mx-auto mb-4" />
           <h1 className="text-4xl font-display mb-4">Your Cosmic Recommendations</h1>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Based on your skills and learning goals, we've curated the perfect matches, 
+            Based on your skills and profile, we've curated the perfect matches, 
             courses, and mentors to accelerate your journey.
           </p>
+          {profileData && (
+            <div className="mt-6 inline-flex items-center bg-cosmic-purple-900/30 rounded-full px-6 py-2">
+              <Star className="h-5 w-5 text-cosmic-gold-400 mr-2" />
+              <span className="text-cosmic-gold-400 font-medium">
+                {profileData.points} Cosmic Points Earned
+              </span>
+            </div>
+          )}
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
@@ -322,7 +349,7 @@ const OnboardingRecommendations: React.FC = () => {
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-medium">{match.username}</h3>
                       <span className={`badge ${getRankBadgeClass(match.rank)} text-xs`}>
-                        {match.rank}
+                        {match.rank.replace('_', ' ')}
                       </span>
                     </div>
                     <div className="text-xs text-gray-400 mb-2">
@@ -330,12 +357,12 @@ const OnboardingRecommendations: React.FC = () => {
                     </div>
                     <div className="text-sm">
                       <p className="text-cosmic-purple-300 mb-1">
-                        Can teach: {match.skills.slice(0, 2).join(', ')}
-                        {match.skills.length > 2 && '...'}
+                        Can teach: {match.skills?.slice(0, 2).join(', ') || 'Various skills'}
+                        {match.skills?.length > 2 && '...'}
                       </p>
                       <p className="text-cosmic-blue-300">
-                        Wants to learn: {match.learning_goals.slice(0, 2).join(', ')}
-                        {match.learning_goals.length > 2 && '...'}
+                        Wants to learn: {match.learning_goals?.slice(0, 2).join(', ') || 'Various topics'}
+                        {match.learning_goals?.length > 2 && '...'}
                       </p>
                     </div>
                   </div>

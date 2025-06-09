@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, Plus, X, Briefcase, Award, Code, Calendar,
   Building, User, FileText, ArrowRight, Loader2
 } from 'lucide-react';
-import { useUser } from '../../contexts/UserContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
 
 interface WorkExperience {
@@ -27,10 +27,21 @@ interface Certification {
   date: string;
 }
 
+interface AccountData {
+  fullName: string;
+  username: string;
+  email: string;
+  password: string;
+  timestamp: string;
+}
+
 const OnboardingProfile: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updateProfile } = useUser();
+  const { signUp } = useAuth();
   const { toast } = useToast();
+  
+  // Account data from previous step
+  const [accountData, setAccountData] = useState<AccountData | null>(null);
   
   // Work Experience
   const [workExperience, setWorkExperience] = useState<WorkExperience[]>([]);
@@ -65,6 +76,28 @@ const OnboardingProfile: React.FC = () => {
   });
 
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Load account data from localStorage
+    const storedAccountData = localStorage.getItem('onboarding_account');
+    if (!storedAccountData) {
+      toast({
+        title: 'Missing Account Information',
+        description: 'Please start from the beginning',
+        variant: 'destructive',
+      });
+      navigate('/onboarding/questionnaire');
+      return;
+    }
+
+    try {
+      const parsedData = JSON.parse(storedAccountData);
+      setAccountData(parsedData);
+    } catch (error) {
+      console.error('Error parsing account data:', error);
+      navigate('/onboarding/questionnaire');
+    }
+  }, [navigate, toast]);
 
   // Work Experience Functions
   const addWorkExperience = () => {
@@ -162,12 +195,13 @@ const OnboardingProfile: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!user) {
+    if (!accountData) {
       toast({
-        title: 'Authentication Error',
-        description: 'Please wait for authentication to complete',
+        title: 'Missing Account Information',
+        description: 'Please start from the beginning',
         variant: 'destructive',
       });
+      navigate('/onboarding/questionnaire');
       return;
     }
 
@@ -183,42 +217,43 @@ const OnboardingProfile: React.FC = () => {
     setLoading(true);
 
     try {
-      const allSkills = [...technicalSkills, ...softSkills];
-      const calculatedPoints = calculatePoints();
-
-      const profileData = {
-        skills: allSkills,
-        points: calculatedPoints,
-        bio: `Experienced professional with ${workExperience.length} work experiences, ${projects.length} projects, and ${certifications.length} certifications.`,
-      };
-
-      const { error } = await updateProfile(profileData);
+      // Now create the actual user account with all the collected information
+      const { error } = await signUp(accountData.email, accountData.password, accountData.username);
       
       if (error) {
         throw error;
       }
 
-      // Store detailed profile data in localStorage for potential future use
-      localStorage.setItem('detailed_profile', JSON.stringify({
+      // Store all profile data for the next step (recommendations)
+      const allSkills = [...technicalSkills, ...softSkills];
+      const calculatedPoints = calculatePoints();
+
+      localStorage.setItem('onboarding_complete_profile', JSON.stringify({
+        accountData,
         workExperience,
         technicalSkills,
         softSkills,
         projects,
         certifications,
-        points: calculatedPoints
+        points: calculatedPoints,
+        skills: allSkills,
+        bio: `Experienced professional with ${workExperience.length} work experiences, ${projects.length} projects, and ${certifications.length} certifications.`,
       }));
 
+      // Clear the temporary account data
+      localStorage.removeItem('onboarding_account');
+
       toast({
-        title: 'Profile Created!',
-        description: `Your profile has been set up with ${calculatedPoints} points!`,
+        title: 'Account Created Successfully!',
+        description: `Your cosmic profile has been created with ${calculatedPoints} points!`,
       });
 
-      navigate('/');
+      navigate('/onboarding/recommendations');
     } catch (error: any) {
-      console.error('Profile setup error:', error);
+      console.error('Account creation error:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create profile',
+        description: error.message || 'Failed to create account. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -233,6 +268,14 @@ const OnboardingProfile: React.FC = () => {
     }
   };
 
+  if (!accountData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen p-4 py-12">
       <div className="container mx-auto max-w-4xl">
@@ -245,7 +288,7 @@ const OnboardingProfile: React.FC = () => {
           <Sparkles className="h-12 w-12 text-cosmic-gold-400 mx-auto mb-4" />
           <h1 className="text-4xl font-display mb-4">Build Your Professional Profile</h1>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Tell us about your experience, skills, and achievements to create your cosmic profile
+            Welcome {accountData.fullName}! Tell us about your experience, skills, and achievements to create your cosmic profile
           </p>
         </motion.div>
 
@@ -571,17 +614,17 @@ const OnboardingProfile: React.FC = () => {
 
             <button
               onClick={handleSubmit}
-              disabled={loading || technicalSkills.length === 0 || !user}
+              disabled={loading || technicalSkills.length === 0}
               className="btn-primary flex items-center justify-center mx-auto"
             >
               {loading ? (
                 <>
                   <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                  Creating your profile...
+                  Creating your cosmic account...
                 </>
               ) : (
                 <>
-                  Complete Profile Setup
+                  Create Account & Continue
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
