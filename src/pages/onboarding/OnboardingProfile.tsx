@@ -42,6 +42,7 @@ const OnboardingProfile: React.FC = () => {
   
   // Account data from previous step
   const [accountData, setAccountData] = useState<AccountData | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Work Experience
   const [workExperience, setWorkExperience] = useState<WorkExperience[]>([]);
@@ -78,26 +79,34 @@ const OnboardingProfile: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Load account data from localStorage
-    const storedAccountData = localStorage.getItem('onboarding_account');
-    if (!storedAccountData) {
-      toast({
-        title: 'Missing Account Information',
-        description: 'Please start from the beginning',
-        variant: 'destructive',
-      });
-      navigate('/onboarding/questionnaire');
-      return;
-    }
+    // Only load data once when component mounts
+    if (!dataLoaded) {
+      const storedAccountData = localStorage.getItem('onboarding_account');
+      if (!storedAccountData) {
+        toast({
+          title: 'Missing Account Information',
+          description: 'Please start from the beginning',
+          variant: 'destructive',
+        });
+        navigate('/onboarding/questionnaire');
+        return;
+      }
 
-    try {
-      const parsedData = JSON.parse(storedAccountData);
-      setAccountData(parsedData);
-    } catch (error) {
-      console.error('Error parsing account data:', error);
-      navigate('/onboarding/questionnaire');
+      try {
+        const parsedData = JSON.parse(storedAccountData);
+        setAccountData(parsedData);
+        setDataLoaded(true);
+      } catch (error) {
+        console.error('Error parsing account data:', error);
+        toast({
+          title: 'Invalid Account Data',
+          description: 'Please start from the beginning',
+          variant: 'destructive',
+        });
+        navigate('/onboarding/questionnaire');
+      }
     }
-  }, [navigate, toast]);
+  }, [dataLoaded, navigate, toast]);
 
   // Work Experience Functions
   const addWorkExperience = () => {
@@ -268,7 +277,8 @@ const OnboardingProfile: React.FC = () => {
     }
   };
 
-  if (!accountData) {
+  // Show loading while data is being loaded
+  if (!dataLoaded || !accountData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />

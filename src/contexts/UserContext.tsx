@@ -240,8 +240,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) throw error;
 
-      // Don't create profile here - let the auth state change handler and database triggers handle it
-      // The profile will be created automatically when the user is confirmed and signed in
+      // The profile will be created automatically by the database trigger
+      // when the user is confirmed and signed in
       
       return { error: null };
     } catch (error) {

@@ -96,17 +96,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
 
         if (session?.user) {
+          // Check if profile exists, if not create it
           const { data: existingProfile, error: fetchError } = await supabase
             .from('profiles')
             .select('id')
             .eq('id', session.user.id)
             .single();
 
-          if (!existingProfile) {
+          if (!existingProfile && !fetchError) {
+            // Profile doesn't exist, create it
             const { error: insertError } = await supabase.from('profiles').insert({
               id: session.user.id,
               email: session.user.email,
-              username: session.user.user_metadata?.username ?? ''
+              username: session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? ''
             });
 
             if (insertError) {
@@ -157,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error || !data.user) throw error;
 
-      // NOT creating profile here to avoid race condition with foreign key
+      // Profile creation will be handled by the auth state change listener
       return { error: null };
     } catch (error) {
       console.error('Signup error:', error);
