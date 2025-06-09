@@ -162,6 +162,15 @@ const OnboardingProfile: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    if (!user) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please wait for authentication to complete',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (technicalSkills.length === 0) {
       toast({
         title: 'Skills Required',
@@ -562,7 +571,7 @@ const OnboardingProfile: React.FC = () => {
 
             <button
               onClick={handleSubmit}
-              disabled={loading || technicalSkills.length === 0}
+              disabled={loading || technicalSkills.length === 0 || !user}
               className="btn-primary flex items-center justify-center mx-auto"
             >
               {loading ? (
