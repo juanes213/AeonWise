@@ -6,44 +6,37 @@ import {
   User, Edit2, BookOpen, Sparkles, Trophy, Plus, Save, X, 
   Loader2, BadgeCheck, UserCircle
 } from 'lucide-react';
-import { useUser, UserProfile } from '../contexts/UserContext';
+import { useSimpleAuth } from '../contexts/SimpleAuthContext';
 import { useToast } from '../hooks/useToast';
-import { getRankBadgeClass } from '../lib/utils';
+import { useSupabase } from '../lib/supabase/SupabaseProvider';
 
 const ProfilePage: React.FC = () => {
   const { t } = useTranslation();
-  const { user, isLoading, updateProfile } = useUser();
+  const { user, profile } = useSimpleAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const supabase = useSupabase();
   
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({});
+  const [editedProfile, setEditedProfile] = useState({
+    bio: profile?.bio || '',
+    skills: profile?.skills || [],
+    learning_goals: profile?.learning_goals || [],
+  });
   const [newSkill, setNewSkill] = useState('');
   const [newGoal, setNewGoal] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Redirect if not logged in
   React.useEffect(() => {
-    if (!isLoading && !user) {
+    if (!user) {
       toast({
         title: 'Authentication Required',
         description: 'Please sign in to view your profile',
       });
-      navigate('/auth');
+      navigate('/auth/signup');
     }
-  }, [user, isLoading, navigate, toast]);
-
-  // Initialize edited profile when user data loads
-  React.useEffect(() => {
-    if (user) {
-      setEditedProfile({
-        username: user.username,
-        bio: user.bio,
-        skills: [...(user.skills || [])],
-        learning_goals: [...(user.learning_goals || [])],
-      });
-    }
-  }, [user]);
+  }, [user, navigate, toast]);
 
   const handleStartEditing = () => {
     setIsEditing(true);
@@ -52,14 +45,11 @@ const ProfilePage: React.FC = () => {
   const handleCancelEditing = () => {
     setIsEditing(false);
     // Reset to original values
-    if (user) {
-      setEditedProfile({
-        username: user.username,
-        bio: user.bio,
-        skills: [...(user.skills || [])],
-        learning_goals: [...(user.learning_goals || [])],
-      });
-    }
+    setEditedProfile({
+      bio: profile?.bio || '',
+      skills: profile?.skills || [],
+      learning_goals: profile?.learning_goals || [],
+    });
     setNewSkill('');
     setNewGoal('');
   };
@@ -70,7 +60,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleAddSkill = () => {
-    if (newSkill.trim() && editedProfile.skills) {
+    if (newSkill.trim() && !editedProfile.skills.includes(newSkill.trim())) {
       setEditedProfile({
         ...editedProfile,
         skills: [...editedProfile.skills, newSkill.trim()],
@@ -80,15 +70,13 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleRemoveSkill = (index: number) => {
-    if (editedProfile.skills) {
-      const updatedSkills = [...editedProfile.skills];
-      updatedSkills.splice(index, 1);
-      setEditedProfile({ ...editedProfile, skills: updatedSkills });
-    }
+    const updatedSkills = [...editedProfile.skills];
+    updatedSkills.splice(index, 1);
+    setEditedProfile({ ...editedProfile, skills: updatedSkills });
   };
 
   const handleAddGoal = () => {
-    if (newGoal.trim() && editedProfile.learning_goals) {
+    if (newGoal.trim() && !editedProfile.learning_goals.includes(newGoal.trim())) {
       setEditedProfile({
         ...editedProfile,
         learning_goals: [...editedProfile.learning_goals, newGoal.trim()],
@@ -98,19 +86,25 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleRemoveGoal = (index: number) => {
-    if (editedProfile.learning_goals) {
-      const updatedGoals = [...editedProfile.learning_goals];
-      updatedGoals.splice(index, 1);
-      setEditedProfile({ ...editedProfile, learning_goals: updatedGoals });
-    }
+    const updatedGoals = [...editedProfile.learning_goals];
+    updatedGoals.splice(index, 1);
+    setEditedProfile({ ...editedProfile, learning_goals: updatedGoals });
   };
 
   const handleSaveProfile = async () => {
-    if (!user) return;
+    if (!user || !profile) return;
     
     setSaving(true);
     try {
-      const { error } = await updateProfile(editedProfile);
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          bio: editedProfile.bio,
+          skills: editedProfile.skills,
+          learning_goals: editedProfile.learning_goals,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', profile.id);
       
       if (error) {
         throw error;
@@ -118,10 +112,15 @@ const ProfilePage: React.FC = () => {
       
       toast({
         title: 'Success',
-        description: t('profile.updateSuccessful'),
+        description: 'Profile updated successfully',
       });
       
       setIsEditing(false);
+      
+      // Update local storage
+      const updatedProfile = { ...profile, ...editedProfile };
+      localStorage.setItem('simple_auth_profile', JSON.stringify(updatedProfile));
+      
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -134,13 +133,24 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  if (isLoading || !user) {
+  if (!user || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
       </div>
     );
   }
+
+  const calculateRank = (points: number): string => {
+    if (points >= 1601) return 'cosmic_sage';
+    if (points >= 1201) return 'galactic_guide';
+    if (points >= 801) return 'comet_crafter';
+    if (points >= 501) return 'astral_apprentice';
+    if (points >= 251) return 'nebula_novice';
+    return 'starspark';
+  };
+
+  const rank = calculateRank(profile.points);
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -161,7 +171,7 @@ const ProfilePage: React.FC = () => {
           variants={fadeIn}
         >
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-display">{t('profile.title')}</h1>
+            <h1 className="text-2xl font-display">Your Profile</h1>
             {isEditing ? (
               <div className="flex space-x-3">
                 <button
@@ -170,7 +180,7 @@ const ProfilePage: React.FC = () => {
                   disabled={saving}
                 >
                   <X className="h-4 w-4 mr-1" />
-                  {t('common.cancel')}
+                  Cancel
                 </button>
                 <button
                   onClick={handleSaveProfile}
@@ -182,7 +192,7 @@ const ProfilePage: React.FC = () => {
                   ) : (
                     <Save className="h-4 w-4 mr-1" />
                   )}
-                  {t('common.save')}
+                  Save
                 </button>
               </div>
             ) : (
@@ -191,7 +201,7 @@ const ProfilePage: React.FC = () => {
                 className="btn-secondary flex items-center text-sm"
               >
                 <Edit2 className="h-4 w-4 mr-1" />
-                {t('profile.editProfile')}
+                Edit Profile
               </button>
             )}
           </div>
@@ -201,26 +211,18 @@ const ProfilePage: React.FC = () => {
             <div className="md:col-span-1">
               <div className="flex flex-col items-center text-center mb-6">
                 <div className="w-24 h-24 rounded-full bg-cosmic-purple-800/50 flex items-center justify-center mb-4 relative">
-                  {user.avatar_url ? (
-                    <img
-                      src={user.avatar_url}
-                      alt={user.username}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <UserCircle className="w-16 h-16 text-white/70" />
-                  )}
+                  <UserCircle className="w-16 h-16 text-white/70" />
                 </div>
                 <h2 className="text-xl font-display mb-1">{user.username}</h2>
                 <div className="mb-4">
-                  <span className={`badge ${getRankBadgeClass(user.rank)}`}>
-                    {t(`ranks.${user.rank}`)}
+                  <span className="badge bg-cosmic-purple-900 text-cosmic-purple-100">
+                    {rank.replace('_', ' ')}
                   </span>
                 </div>
                 <div className="bg-cosmic-black/30 px-4 py-2 rounded-full mb-2 flex items-center">
                   <Trophy className="h-4 w-4 text-cosmic-gold-400 mr-2" />
                   <span className="text-sm">
-                    {user.points} {t('profile.points')}
+                    {profile.points} Points
                   </span>
                 </div>
               </div>
@@ -228,12 +230,12 @@ const ProfilePage: React.FC = () => {
               <div className="bg-cosmic-black/20 rounded-lg p-4 mb-6">
                 <h3 className="text-sm uppercase tracking-wider text-cosmic-gold-400 mb-3 flex items-center">
                   <User className="h-4 w-4 mr-2" />
-                  {t('profile.personalInfo')}
+                  Account Info
                 </h3>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm text-white/50">Email</p>
-                    <p>{user.email}</p>
+                    <p className="text-sm text-white/50">Username</p>
+                    <p>{user.username}</p>
                   </div>
                   <div>
                     <p className="text-sm text-white/50">Member Since</p>
@@ -247,18 +249,18 @@ const ProfilePage: React.FC = () => {
             <div className="md:col-span-2">
               {/* Bio */}
               <div className="mb-8">
-                <h3 className="text-lg font-display mb-3">{t('profile.bio')}</h3>
+                <h3 className="text-lg font-display mb-3">Bio</h3>
                 {isEditing ? (
                   <textarea
                     name="bio"
-                    value={editedProfile.bio || ''}
+                    value={editedProfile.bio}
                     onChange={handleChange}
                     className="w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500 min-h-[100px]"
                     placeholder="Tell us about yourself..."
                   />
                 ) : (
                   <p className="text-white/80">
-                    {user.bio || "No bio available. Click 'Edit Profile' to add one."}
+                    {profile.bio || "No bio available. Click 'Edit Profile' to add one."}
                   </p>
                 )}
               </div>
@@ -268,7 +270,7 @@ const ProfilePage: React.FC = () => {
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-display flex items-center">
                     <Sparkles className="h-5 w-5 text-cosmic-gold-400 mr-2" />
-                    {t('profile.skills')}
+                    Skills
                   </h3>
                   {isEditing && (
                     <div className="flex">
@@ -290,10 +292,10 @@ const ProfilePage: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                  {(editedProfile.skills || []).length === 0 ? (
+                  {editedProfile.skills.length === 0 ? (
                     <p className="text-white/50 text-sm">No skills added yet.</p>
                   ) : (
-                    (editedProfile.skills || []).map((skill, index) => (
+                    editedProfile.skills.map((skill, index) => (
                       <div
                         key={index}
                         className="inline-flex items-center bg-cosmic-purple-900/50 rounded-md px-3 py-1 text-sm"
@@ -318,7 +320,7 @@ const ProfilePage: React.FC = () => {
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-display flex items-center">
                     <BookOpen className="h-5 w-5 text-cosmic-gold-400 mr-2" />
-                    {t('profile.learningGoals')}
+                    Learning Goals
                   </h3>
                   {isEditing && (
                     <div className="flex">
@@ -340,10 +342,10 @@ const ProfilePage: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                  {(editedProfile.learning_goals || []).length === 0 ? (
+                  {editedProfile.learning_goals.length === 0 ? (
                     <p className="text-white/50 text-sm">No learning goals added yet.</p>
                   ) : (
-                    (editedProfile.learning_goals || []).map((goal, index) => (
+                    editedProfile.learning_goals.map((goal, index) => (
                       <div
                         key={index}
                         className="inline-flex items-center bg-cosmic-blue-900/50 rounded-md px-3 py-1 text-sm"
