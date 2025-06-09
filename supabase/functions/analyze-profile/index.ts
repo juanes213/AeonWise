@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, user-id',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
@@ -13,233 +13,93 @@ interface ExperienceAnalysis {
   projects: string[];
 }
 
-function extractSkillsFromText(text: string): string[] {
-  const skillKeywords = [
-    // Programming Languages
-    'javascript', 'python', 'java', 'typescript', 'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin',
-    // Web Technologies
-    'html', 'css', 'react', 'vue', 'angular', 'node.js', 'express', 'django', 'flask', 'laravel',
-    // Databases
-    'sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch',
-    // Cloud & DevOps
-    'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'git', 'ci/cd',
-    // Data & AI
-    'machine learning', 'data science', 'tensorflow', 'pytorch', 'pandas', 'numpy',
-    // Design & Marketing
-    'photoshop', 'illustrator', 'figma', 'ui/ux', 'graphic design', 'marketing', 'seo',
-    // Business
-    'project management', 'agile', 'scrum', 'leadership', 'communication'
-  ];
-
-  const lowerText = text.toLowerCase();
-  const foundSkills: string[] = [];
-
-  skillKeywords.forEach(skill => {
-    if (lowerText.includes(skill.toLowerCase())) {
-      foundSkills.push(skill.charAt(0).toUpperCase() + skill.slice(1));
+async function fetchWithRetry(url: string, options: RequestInit, retries = 3, backoff = 1000): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    const response = await fetch(url, options);
+    if (response.ok) return response;
+    if (response.status === 429) {
+      await new Promise(resolve => setTimeout(resolve, backoff * (2 ** i)));
+      continue;
     }
+    throw new Error(`Hugging Face API error: ${response.statusText}`);
+  }
+  throw new Error('Max retries reached');
+}
+
+async function extractSkillsFromText(text: string): Promise<string[]> {
+  const hfApiKey = Deno.env.get('HF_API_KEY');
+  if (!hfApiKey) throw new Error('Missing Hugging Face API key');
+
+  const response = await fetchWithRetry('https://api-inference.huggingface.co/models/dslim/bert-base-NER', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${hfApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ inputs: text })
   });
 
-  return [...new Set(foundSkills)]; // Remove duplicates
+  const entities = await response.json();
+  const skills: Set<string> = new Set();
+
+  // Define skill keywords from CV context
+  const skillKeywords = [
+    'python', 'r', 'typescript', 'javascript', 'sql', 'react', 'tailwind css', 'vite', 'supabase', 'postgresql',
+    'mongodb', 'power bi', 'tableau', 'dash', 'r shiny', 'docker', 'git', 'jupyter notebook',
+    'machine learning', 'nlp', 'generative ai', 'computer vision', 'transformers', 'gpt', 'bert',
+    'pandas', 'numpy', 'tensorflow', 'pytorch', 'xgboost', 'lgbm', 'random forest', 'gradient boosting'
+  ].map(s => s.toLowerCase());
+
+  // Extract skills from NER entities and match with keywords
+  let currentSkill = '';
+  for (const entity of entities) {
+    if (entity.entity_group === 'MISC' || entity.entity_group === 'ORG') {
+      currentSkill += (currentSkill ? ' ' : '') + entity.word.toLowerCase();
+      if (skillKeywords.includes(currentSkill)) {
+        skills.add(currentSkill.charAt(0).toUpperCase() + currentSkill.slice(1));
+        currentSkill = '';
+      }
+    } else {
+      if (currentSkill && skillKeywords.includes(currentSkill)) {
+        skills.add(currentSkill.charAt(0).toUpperCase() + currentSkill.slice(1));
+      }
+      currentSkill = '';
+    }
+  }
+
+  // Fallback: Check CV’s Technical Skills section directly
+  const skillsSectionMatch = text.match(/Technical Skills([\s\S]*?)(?:Languages|Certifications|Projects|$)/i);
+  if (skillsSectionMatch) {
+    const skillsText = skillsSectionMatch[1].toLowerCase();
+    skillKeywords.forEach(skill => {
+      if (skillsText.includes(skill)) {
+        skills.add(skill.charAt(0).toUpperCase() + skill.slice(1));
+      }
+    });
+  }
+
+  return [...skills];
 }
 
 function extractExperienceYears(text: string): number {
-  const experiencePatterns = [
-    /(\d+)\+?\s*years?\s*(?:of\s*)?experience/gi,
-    /(\d+)\+?\s*years?\s*in/gi,
-    /experience\s*:\s*(\d+)\+?\s*years?/gi,
-    /(\d+)\+?\s*years?\s*working/gi
+  const datePatterns = [
+    /(\w+\s+\d{4})\s*-\s*(\w+\s+\d{4}|Present)/gi
   ];
 
-  let maxYears = 0;
-  
-  experiencePatterns.forEach(pattern => {
-    const matches = text.matchAll(pattern);
-    for (const match of matches) {
-      const years = parseInt(match[1]);
-      if (years > maxYears && years <= 50) { // Cap at 50 years for realism
-        maxYears = years;
-      }
+  let totalMonths = 0;
+  const matches = text.matchAll(datePatterns);
+  const currentDate = new Date('2025-06-09'); // Hackathon date
+
+  for (const match of matches) {
+    const startDate = new Date(match[1]);
+    const endDate = match[2].toLowerCase() === 'present' ? currentDate : new Date(match[2]);
+    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+      const months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth());
+      totalMonths += months;
     }
-  });
-
-  return maxYears;
-}
-
-function extractCertifications(text: string): string[] {
-  const certPatterns = [
-    /certified?\s+([a-z\s]+)/gi,
-    /certification\s+in\s+([a-z\s]+)/gi,
-    /(aws|azure|google|microsoft|cisco|oracle)\s+certified/gi,
-    /(pmp|cissp|cisa|cism|comptia)/gi
-  ];
-
-  const certifications: string[] = [];
-  
-  certPatterns.forEach(pattern => {
-    const matches = text.matchAll(pattern);
-    for (const match of matches) {
-      if (match[1]) {
-        certifications.push(match[1].trim());
-      } else {
-        certifications.push(match[0].trim());
-      }
-    }
-  });
-
-  return [...new Set(certifications)];
-}
-
-function extractProjects(text: string): string[] {
-  const projectPatterns = [
-    /project\s*:\s*([^\n\r.]+)/gi,
-    /developed\s+([^\n\r.]+)/gi,
-    /built\s+([^\n\r.]+)/gi,
-    /created\s+([^\n\r.]+)/gi
-  ];
-
-  const projects: string[] = [];
-  
-  projectPatterns.forEach(pattern => {
-    const matches = text.matchAll(pattern);
-    for (const match of matches) {
-      if (match[1] && match[1].length > 10 && match[1].length < 100) {
-        projects.push(match[1].trim());
-      }
-    }
-  });
-
-  return [...new Set(projects)].slice(0, 10); // Limit to 10 projects
-}
-
-function analyzeTextLocally(text: string): ExperienceAnalysis {
-  return {
-    yearsExperience: extractExperienceYears(text),
-    skills: extractSkillsFromText(text),
-    certifications: extractCertifications(text),
-    projects: extractProjects(text)
-  };
-}
-
-function calculatePoints(analysis: ExperienceAnalysis): number {
-  let totalPoints = 0;
-
-  // Experience points (75 per year)
-  totalPoints += analysis.yearsExperience * 75;
-
-  // Skill points (40 per skill)
-  totalPoints += analysis.skills.length * 40;
-
-  // Certification points (80 per cert)
-  totalPoints += analysis.certifications.length * 80;
-
-  // Project points (60 per project)
-  totalPoints += analysis.projects.length * 60;
-
-  // Cap initial points at 1800
-  return Math.min(totalPoints, 1800);
-}
-
-function calculateRank(points: number): string {
-  if (points >= 1601) return 'cosmic_sage';
-  if (points >= 1201) return 'galactic_guide';
-  if (points >= 801) return 'comet_crafter';
-  if (points >= 501) return 'astral_apprentice';
-  if (points >= 251) return 'nebula_novice';
-  return 'starspark';
-}
-
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  try {
-    const { text, userId } = await req.json();
+  return Math.floor(totalMonths / 12); // Convert to years
+}
 
-    if (!text || !userId) {
-      return new Response(
-        JSON.stringify({ error: 'Text and userId are required' }), 
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Use local text analysis as fallback
-    const analysis: ExperienceAnalysis = analyzeTextLocally(text);
-
-    // Calculate points and rank
-    const points = calculatePoints(analysis);
-    const rank = calculateRank(points);
-
-    // Update the user's profile in Supabase
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get current user data first
-    const { data: currentProfile } = await supabase
-      .from('profiles')
-      .select('skills, points')
-      .eq('id', userId)
-      .single();
-
-    // Merge existing skills with new ones
-    const existingSkills = currentProfile?.skills || [];
-    const mergedSkills = [...new Set([...existingSkills, ...analysis.skills])];
-
-    // Add points to existing total
-    const currentPoints = currentProfile?.points || 0;
-    const newTotalPoints = currentPoints + points;
-
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ 
-        points: newTotalPoints,
-        skills: mergedSkills,
-        last_activity: new Date().toISOString(),
-      })
-      .eq('id', userId);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    // Record points in rank_points
-    const { error: pointsError } = await supabase
-      .from('rank_points')
-      .insert({
-        user_id: userId,
-        source: 'cv_analysis',
-        points,
-        details: {
-          yearsExperience: analysis.yearsExperience,
-          skillCount: analysis.skills.length,
-          certCount: analysis.certifications.length,
-          projectCount: analysis.projects.length,
-          method: 'local_analysis'
-        },
-      });
-
-    if (pointsError) {
-      throw pointsError;
-    }
-
-    return new Response(
-      JSON.stringify({
-        analysis,
-        points,
-        rank: calculateRank(newTotalPoints),
-        totalPoints: newTotalPoints,
-        method: 'local_analysis'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }), 
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-});
+function extract
