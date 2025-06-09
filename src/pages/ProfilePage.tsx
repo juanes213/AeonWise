@@ -6,22 +6,22 @@ import {
   User, Edit2, BookOpen, Sparkles, Trophy, Plus, Save, X, 
   Loader2, BadgeCheck, UserCircle
 } from 'lucide-react';
-import { useSimpleAuth } from '../contexts/SimpleAuthContext';
+import { useUser } from '../contexts/UserContext';
 import { useToast } from '../hooks/useToast';
 import { useSupabase } from '../lib/supabase/SupabaseProvider';
 
 const ProfilePage: React.FC = () => {
   const { t } = useTranslation();
-  const { user, profile } = useSimpleAuth();
+  const { user, isLoading, updateProfile } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
   const supabase = useSupabase();
   
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({
-    bio: profile?.bio || '',
-    skills: profile?.skills || [],
-    learning_goals: profile?.learning_goals || [],
+    bio: user?.bio || '',
+    skills: user?.skills || [],
+    learning_goals: user?.learning_goals || [],
   });
   const [newSkill, setNewSkill] = useState('');
   const [newGoal, setNewGoal] = useState('');
@@ -29,14 +29,14 @@ const ProfilePage: React.FC = () => {
 
   // Redirect if not logged in
   React.useEffect(() => {
-    if (!user) {
+    if (!user && !isLoading) {
       toast({
         title: 'Authentication Required',
         description: 'Please sign in to view your profile',
       });
       navigate('/auth/signup');
     }
-  }, [user, navigate, toast]);
+  }, [user, isLoading, navigate, toast]);
 
   const handleStartEditing = () => {
     setIsEditing(true);
@@ -46,9 +46,9 @@ const ProfilePage: React.FC = () => {
     setIsEditing(false);
     // Reset to original values
     setEditedProfile({
-      bio: profile?.bio || '',
-      skills: profile?.skills || [],
-      learning_goals: profile?.learning_goals || [],
+      bio: user?.bio || '',
+      skills: user?.skills || [],
+      learning_goals: user?.learning_goals || [],
     });
     setNewSkill('');
     setNewGoal('');
@@ -92,7 +92,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!user || !profile) return;
+    if (!user) return;
     
     setSaving(true);
     try {
@@ -104,7 +104,7 @@ const ProfilePage: React.FC = () => {
           learning_goals: editedProfile.learning_goals,
           updated_at: new Date().toISOString()
         })
-        .eq('id', profile.id);
+        .eq('id', user.id);
       
       if (error) {
         throw error;
@@ -117,9 +117,10 @@ const ProfilePage: React.FC = () => {
       
       setIsEditing(false);
       
-      // Update local storage
-      const updatedProfile = { ...profile, ...editedProfile };
-      localStorage.setItem('simple_auth_profile', JSON.stringify(updatedProfile));
+      // Update profile using the context
+      if (updateProfile) {
+        updateProfile(editedProfile);
+      }
       
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -133,7 +134,7 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  if (!user || !profile) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
@@ -150,7 +151,7 @@ const ProfilePage: React.FC = () => {
     return 'starspark';
   };
 
-  const rank = calculateRank(profile.points);
+  const rank = calculateRank(user.points || 0);
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -222,7 +223,7 @@ const ProfilePage: React.FC = () => {
                 <div className="bg-cosmic-black/30 px-4 py-2 rounded-full mb-2 flex items-center">
                   <Trophy className="h-4 w-4 text-cosmic-gold-400 mr-2" />
                   <span className="text-sm">
-                    {profile.points} Points
+                    {user.points || 0} Points
                   </span>
                 </div>
               </div>
@@ -260,7 +261,7 @@ const ProfilePage: React.FC = () => {
                   />
                 ) : (
                   <p className="text-white/80">
-                    {profile.bio || "No bio available. Click 'Edit Profile' to add one."}
+                    {user.bio || "No bio available. Click 'Edit Profile' to add one."}
                   </p>
                 )}
               </div>
