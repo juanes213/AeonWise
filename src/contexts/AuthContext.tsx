@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               clearAuthStorage();
               await supabase.auth.signOut();
             }
-          } catch (e) {
+          } catch {
             clearAuthStorage();
             await supabase.auth.signOut();
           }
@@ -56,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
+          console.warn('Auth session error:', error);
           clearAuthStorage();
           await supabase.auth.signOut();
           if (mounted) {
@@ -93,6 +94,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(session?.user ?? null);
         setLoading(false);
+
+        if (session?.user) {
+          const { data: existingProfile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!existingProfile) {
+            const { error: insertError } = await supabase.from('profiles').insert({
+              id: session.user.id,
+              email: session.user.email,
+              username: session.user.user_metadata?.username ?? ''
+            });
+
+            if (insertError) {
+              console.error('Profile creation error:', insertError);
+            } else {
+              console.log('Profile created successfully');
+            }
+          }
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setLoading(false);
@@ -127,23 +150,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { username }
+        }
       });
 
       if (error || !data.user) throw error;
 
-      // Insert into profiles table
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        email,
-        username,
-      });
-
-      if (profileError) throw profileError;
-
-      setUser(data.user);
+      // NOT creating profile here to avoid race condition with foreign key
       return { error: null };
     } catch (error) {
-      console.error('Error signing up:', error);
+      console.error('Signup error:', error);
       return { error };
     } finally {
       setLoading(false);
@@ -168,9 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  if (!initialized) {
-    return null;
-  }
+  if (!initialized) return null;
 
   return (
     <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
