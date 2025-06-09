@@ -1,5 +1,3 @@
-import { HfInference } from 'npm:@huggingface/inference@2.6.4';
-import { Anthropic } from 'npm:@anthropic-ai/sdk@0.17.1';
 import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
@@ -8,16 +6,119 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
-const hf = new HfInference(Deno.env.get('HF_API_KEY'));
-const anthropic = new Anthropic({
-  apiKey: Deno.env.get('CLAUDE_API_KEY'),
-});
-
 interface ExperienceAnalysis {
   yearsExperience: number;
   skills: string[];
   certifications: string[];
   projects: string[];
+}
+
+function extractSkillsFromText(text: string): string[] {
+  const skillKeywords = [
+    // Programming Languages
+    'javascript', 'python', 'java', 'typescript', 'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin',
+    // Web Technologies
+    'html', 'css', 'react', 'vue', 'angular', 'node.js', 'express', 'django', 'flask', 'laravel',
+    // Databases
+    'sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch',
+    // Cloud & DevOps
+    'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'git', 'ci/cd',
+    // Data & AI
+    'machine learning', 'data science', 'tensorflow', 'pytorch', 'pandas', 'numpy',
+    // Design & Marketing
+    'photoshop', 'illustrator', 'figma', 'ui/ux', 'graphic design', 'marketing', 'seo',
+    // Business
+    'project management', 'agile', 'scrum', 'leadership', 'communication'
+  ];
+
+  const lowerText = text.toLowerCase();
+  const foundSkills: string[] = [];
+
+  skillKeywords.forEach(skill => {
+    if (lowerText.includes(skill.toLowerCase())) {
+      foundSkills.push(skill.charAt(0).toUpperCase() + skill.slice(1));
+    }
+  });
+
+  return [...new Set(foundSkills)]; // Remove duplicates
+}
+
+function extractExperienceYears(text: string): number {
+  const experiencePatterns = [
+    /(\d+)\+?\s*years?\s*(?:of\s*)?experience/gi,
+    /(\d+)\+?\s*years?\s*in/gi,
+    /experience\s*:\s*(\d+)\+?\s*years?/gi,
+    /(\d+)\+?\s*years?\s*working/gi
+  ];
+
+  let maxYears = 0;
+  
+  experiencePatterns.forEach(pattern => {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      const years = parseInt(match[1]);
+      if (years > maxYears && years <= 50) { // Cap at 50 years for realism
+        maxYears = years;
+      }
+    }
+  });
+
+  return maxYears;
+}
+
+function extractCertifications(text: string): string[] {
+  const certPatterns = [
+    /certified?\s+([a-z\s]+)/gi,
+    /certification\s+in\s+([a-z\s]+)/gi,
+    /(aws|azure|google|microsoft|cisco|oracle)\s+certified/gi,
+    /(pmp|cissp|cisa|cism|comptia)/gi
+  ];
+
+  const certifications: string[] = [];
+  
+  certPatterns.forEach(pattern => {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      if (match[1]) {
+        certifications.push(match[1].trim());
+      } else {
+        certifications.push(match[0].trim());
+      }
+    }
+  });
+
+  return [...new Set(certifications)];
+}
+
+function extractProjects(text: string): string[] {
+  const projectPatterns = [
+    /project\s*:\s*([^\n\r.]+)/gi,
+    /developed\s+([^\n\r.]+)/gi,
+    /built\s+([^\n\r.]+)/gi,
+    /created\s+([^\n\r.]+)/gi
+  ];
+
+  const projects: string[] = [];
+  
+  projectPatterns.forEach(pattern => {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      if (match[1] && match[1].length > 10 && match[1].length < 100) {
+        projects.push(match[1].trim());
+      }
+    }
+  });
+
+  return [...new Set(projects)].slice(0, 10); // Limit to 10 projects
+}
+
+function analyzeTextLocally(text: string): ExperienceAnalysis {
+  return {
+    yearsExperience: extractExperienceYears(text),
+    skills: extractSkillsFromText(text),
+    certifications: extractCertifications(text),
+    projects: extractProjects(text)
+  };
 }
 
 function calculatePoints(analysis: ExperienceAnalysis): number {
@@ -63,55 +164,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use Claude to analyze experience and extract structured data
-    const systemPrompt = `Analyze the user's CV or experience description and extract:
-    1. Total years of experience
-    2. List of technical skills
-    3. List of certifications
-    4. List of significant projects
-    
-    Format as JSON with these fields:
-    {
-      "yearsExperience": number,
-      "skills": string[],
-      "certifications": string[],
-      "projects": string[]
-    }
-    
-    Rules:
-    - Validate claims (e.g., flag unrealistic experience like 50 years)
-    - Only include relevant technical skills
-    - Verify certification names are real
-    - Count only substantial projects`;
-
-    const message = await anthropic.messages.create({
-      model: 'claude-3-sonnet-20240229',
-      max_tokens: 1000,
-      temperature: 0.2,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: text }]
-    });
-
-    const analysis: ExperienceAnalysis = JSON.parse(message.content[0].text);
-
-    // Use BERT to verify skills
-    const skillVerification = await Promise.all(
-      analysis.skills.map(async (skill) => {
-        const response = await hf.textClassification({
-          model: 'bert-base-uncased',
-          inputs: `Skill: ${skill}`,
-        });
-        return {
-          skill,
-          confidence: response[0].score,
-        };
-      })
-    );
-
-    // Filter out skills with low confidence
-    analysis.skills = skillVerification
-      .filter((result) => result.confidence > 0.7)
-      .map((result) => result.skill);
+    // Use local text analysis as fallback
+    const analysis: ExperienceAnalysis = analyzeTextLocally(text);
 
     // Calculate points and rank
     const points = calculatePoints(analysis);
@@ -122,11 +176,26 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get current user data first
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('skills, points')
+      .eq('id', userId)
+      .single();
+
+    // Merge existing skills with new ones
+    const existingSkills = currentProfile?.skills || [];
+    const mergedSkills = [...new Set([...existingSkills, ...analysis.skills])];
+
+    // Add points to existing total
+    const currentPoints = currentProfile?.points || 0;
+    const newTotalPoints = currentPoints + points;
+
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
-        points,
-        skills: analysis.skills,
+        points: newTotalPoints,
+        skills: mergedSkills,
         last_activity: new Date().toISOString(),
       })
       .eq('id', userId);
@@ -135,18 +204,19 @@ Deno.serve(async (req) => {
       throw updateError;
     }
 
-    // Record initial points in rank_points
+    // Record points in rank_points
     const { error: pointsError } = await supabase
       .from('rank_points')
       .insert({
         user_id: userId,
-        source: 'initial_analysis',
+        source: 'cv_analysis',
         points,
         details: {
           yearsExperience: analysis.yearsExperience,
           skillCount: analysis.skills.length,
           certCount: analysis.certifications.length,
           projectCount: analysis.projects.length,
+          method: 'local_analysis'
         },
       });
 
@@ -158,8 +228,9 @@ Deno.serve(async (req) => {
       JSON.stringify({
         analysis,
         points,
-        rank,
-        skillVerification,
+        rank: calculateRank(newTotalPoints),
+        totalPoints: newTotalPoints,
+        method: 'local_analysis'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
