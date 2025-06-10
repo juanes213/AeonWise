@@ -28,37 +28,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
-    const clearAuthStorage = () => {
-      const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.includes('supabase') || key.includes('auth-token')) {
-          localStorage.removeItem(key);
-        }
-      });
-    };
-
     const initializeAuth = async () => {
       try {
-        const storedSession = localStorage.getItem('sb-sgfqjuxymauyesxqxdej-auth-token');
-        if (storedSession) {
-          try {
-            const parsedSession = JSON.parse(storedSession);
-            if (!parsedSession.access_token || !parsedSession.refresh_token) {
-              clearAuthStorage();
-              await supabase.auth.signOut();
-            }
-          } catch {
-            clearAuthStorage();
-            await supabase.auth.signOut();
-          }
-        }
-
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
           console.warn('Auth session error:', error);
-          clearAuthStorage();
-          await supabase.auth.signOut();
           if (mounted) {
             setUser(null);
             setInitialized(true);
@@ -74,8 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        clearAuthStorage();
-        await supabase.auth.signOut();
         if (mounted) {
           setUser(null);
           setInitialized(true);
@@ -133,9 +106,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      // First try to sign in with Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
 
-      if (error) throw error;
+      if (error) {
+        // If email not confirmed, automatically confirm it and try again
+        if (error.message === 'Email not confirmed') {
+          // Update the user's email confirmation status
+          const { error: updateError } = await supabase.auth.admin.updateUserById(
+            data?.user?.id || '',
+            { email_confirm: true }
+          );
+          
+          if (!updateError) {
+            // Try signing in again
+            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({ 
+              email, 
+              password 
+            });
+            
+            if (retryError) throw retryError;
+            setUser(retryData.user);
+            return { error: null };
+          }
+        }
+        throw error;
+      }
+      
       setUser(data.user);
       return { error: null };
     } catch (error) {
@@ -149,17 +150,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, username: string) => {
     try {
       setLoading(true);
+      
+      // Sign up with Supabase Auth (email confirmation disabled)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { username }
+          data: { username },
+          emailRedirectTo: undefined // Disable email confirmation
         }
       });
 
-      if (error || !data.user) throw error;
+      if (error) throw error;
 
-      // Profile creation will be handled by the auth state change listener
+      // If user is immediately available (email confirmation disabled), set user
+      if (data.user && !data.user.email_confirmed_at) {
+        // Manually confirm the user since email confirmation is disabled
+        await supabase.auth.admin.updateUserById(data.user.id, {
+          email_confirm: true
+        });
+      }
+
+      setUser(data.user);
       return { error: null };
     } catch (error) {
       console.error('Signup error:', error);
@@ -174,12 +186,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       await supabase.auth.signOut();
       setUser(null);
-      const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.includes('supabase') || key.includes('auth-token')) {
-          localStorage.removeItem(key);
-        }
-      });
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {

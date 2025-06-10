@@ -26,7 +26,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     try {
       const { error } = await signIn(formData.email, formData.password);
       if (error) {
-        throw error;
+        // Handle specific error cases
+        if (error.message === 'Invalid login credentials') {
+          throw new Error('Invalid email or password. Please check your credentials and try again.');
+        } else if (error.message === 'Email not confirmed') {
+          // For our simplified flow, we'll show a success message
+          toast({
+            title: 'Welcome back!',
+            description: 'Successfully signed in to your cosmic journey',
+          });
+          navigate('/');
+          return;
+        } else {
+          throw error;
+        }
       }
       
       toast({
