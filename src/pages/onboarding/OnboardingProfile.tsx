@@ -241,6 +241,12 @@ const OnboardingProfile: React.FC = () => {
       const calculatedPoints = calculatePoints();
       const bio = `Experienced professional with ${workExperience.length} work experiences, ${projects.length} projects, and ${certifications.length} certifications.`;
 
+      console.log('Updating profile with:', {
+        skills: allSkills,
+        points: calculatedPoints,
+        bio: bio,
+      });
+
       // Update user profile with all collected information
       const { error } = await updateProfile({
         skills: allSkills,
@@ -249,6 +255,7 @@ const OnboardingProfile: React.FC = () => {
       });
 
       if (error) {
+        console.error('Profile update error:', error);
         throw error;
       }
 
@@ -273,7 +280,11 @@ const OnboardingProfile: React.FC = () => {
         description: `Your cosmic profile has been created with ${calculatedPoints} points!`,
       });
 
-      navigate('/onboarding/recommendations');
+      // Wait a moment for the profile to be updated
+      setTimeout(() => {
+        navigate('/onboarding/recommendations');
+      }, 1000);
+
     } catch (error: any) {
       console.error('Profile creation error:', error);
       toast({

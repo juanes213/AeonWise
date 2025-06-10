@@ -135,7 +135,9 @@ const SkillSwapPage: React.FC = () => {
               2. "skillMatches" - Array of skills that would complement their learning goals
               3. "mentorSpecialties" - Array of mentor specialties they should look for
               
-              Keep recommendations practical and relevant. Limit each array to 3-5 items.`
+              Keep recommendations practical and relevant. Limit each array to 3-5 items.
+              
+              IMPORTANT: You must respond with ONLY valid JSON. Do not include any explanatory text before or after the JSON.`
             },
             {
               role: 'user',
@@ -152,7 +154,40 @@ const SkillSwapPage: React.FC = () => {
       }
 
       const groqResponse = await response.json();
-      const recommendations = JSON.parse(groqResponse.choices[0].message.content);
+      let recommendations;
+      
+      try {
+        // Clean the response content to ensure it's valid JSON
+        let content = groqResponse.choices[0].message.content.trim();
+        
+        // Remove any markdown code blocks if present
+        content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        
+        // Try to find JSON content if there's extra text
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          content = jsonMatch[0];
+        }
+        
+        recommendations = JSON.parse(content);
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', groqResponse.choices[0].message.content);
+        // Fallback recommendations
+        recommendations = {
+          suggestedCourses: [
+            {
+              title: `Introduction to ${learningGoals[0]}`,
+              description: `Learn the fundamentals of ${learningGoals[0]} from scratch`,
+              level: 'beginner',
+              estimatedDuration: 8,
+              modules: 6,
+              category: 'General'
+            }
+          ],
+          skillMatches: learningGoals,
+          mentorSpecialties: learningGoals
+        };
+      }
 
       // Set suggested courses from AI
       const aiCourses = recommendations.suggestedCourses?.map((course: any, index: number) => ({

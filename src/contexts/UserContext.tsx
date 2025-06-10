@@ -263,13 +263,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      setIsLoading(true);
+      console.log('Updating profile for user:', user.id, 'with updates:', updates);
+      
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', user.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
+      }
 
       const updatedUser = {
         ...user,
@@ -277,14 +284,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         rank: calculateRank(updates.points !== undefined ? updates.points : user.points)
       };
       
+      console.log('Profile updated successfully, new user state:', updatedUser);
       setUser(updatedUser);
       
       return { error: null };
     } catch (error) {
       console.error('Error updating profile:', error);
       return { error };
-    } finally {
-      setIsLoading(false);
     }
   };
 
