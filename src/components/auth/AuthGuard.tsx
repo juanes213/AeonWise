@@ -23,7 +23,10 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-cosmic-black flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin mx-auto mb-4" />
+          <div className="text-white">Loading your cosmic profile...</div>
+        </div>
       </div>
     );
   }

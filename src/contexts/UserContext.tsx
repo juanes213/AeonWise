@@ -82,6 +82,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeUser = async () => {
       try {
         console.log('Initializing user...');
+        
+        // Check if we have a valid supabase client
+        if (!supabase || typeof supabase.auth?.getSession !== 'function') {
+          console.error('Supabase client not properly initialized');
+          if (mounted) {
+            setUser(null);
+            setInitialized(true);
+            setIsLoading(false);
+          }
+          return;
+        }
+
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -96,30 +108,30 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user && mounted) {
           console.log('User session found:', session.user.id);
-          const { data: profile, error } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
             
-          if (!error && profile && mounted) {
+          if (!profileError && profile && mounted) {
             console.log('User profile loaded:', profile);
             setUser({
               ...profile,
               rank: calculateRank(profile.points)
             });
           } else {
-            console.log('No profile found or error:', error);
+            console.log('No profile found or error:', profileError);
+            setUser(null);
           }
         } else {
           console.log('No user session');
+          setUser(null);
         }
       } catch (error) {
         console.error('Error initializing user:', error);
         if (mounted) {
           setUser(null);
-          setInitialized(true);
-          setIsLoading(false);
         }
       } finally {
         if (mounted) {
@@ -131,43 +143,54 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
+    // Set up auth state listener
+    let subscription: any = null;
+    
+    try {
+      const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (!mounted) return;
 
-      console.log('User context auth state change:', event);
+        console.log('User context auth state change:', event);
 
-      if (event === 'SIGNED_IN' && session) {
-        setIsLoading(true);
-        try {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (!error && profile) {
-            setUser({
-              ...profile,
-              rank: calculateRank(profile.points)
-            });
+        if (event === 'SIGNED_IN' && session) {
+          setIsLoading(true);
+          try {
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+              
+            if (!error && profile) {
+              setUser({
+                ...profile,
+                rank: calculateRank(profile.points)
+              });
+            }
+          } catch (error) {
+            console.error('Error loading user profile:', error);
+          } finally {
+            setIsLoading(false);
           }
-        } catch (error) {
-          console.error('Error loading user profile:', error);
-        } finally {
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setIsLoading(false);
+        } else if (event === 'TOKEN_REFRESHED' && session) {
+          await refreshUser();
           setIsLoading(false);
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setIsLoading(false);
-      } else if (event === 'TOKEN_REFRESHED' && session) {
-        await refreshUser();
-        setIsLoading(false);
-      }
-    });
+      });
+      
+      subscription = authSubscription;
+    } catch (error) {
+      console.error('Error setting up auth listener:', error);
+    }
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      if (subscription?.unsubscribe) {
+        subscription.unsubscribe();
+      }
     };
   }, [supabase]);
 
@@ -285,7 +308,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('UserProvider not initialized yet');
     return (
       <div className="min-h-screen bg-cosmic-black flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <div className="text-white">Loading AeonWise...</div>
       </div>
     );
   }

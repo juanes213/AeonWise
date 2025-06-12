@@ -31,7 +31,7 @@ function App() {
       <SupabaseProvider>
         <UserProvider>
           <Router>
-            <div className="flex flex-col min-h-screen">
+            <div className="flex flex-col min-h-screen bg-cosmic-black">
               <StarfieldBackground />
               <Routes>
                 {/* Public auth routes */}
