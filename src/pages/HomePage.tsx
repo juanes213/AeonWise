@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { BookOpen, Users, Sparkles, Trophy } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
 
 const HomePage: React.FC = () => {
   const { t } = useTranslation();
+  const { user } = useUser();
   
   console.log('HomePage rendering...');
 
@@ -47,12 +49,25 @@ const HomePage: React.FC = () => {
               Join our mystical community of mentors and learners to exchange knowledge, grow your skills, and discover new talents.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link to="/skill-swap" className="btn-primary">
-                Get Started
-              </Link>
-              <Link to="/mentorship" className="btn-secondary">
-                Find Mentors
-              </Link>
+              {user ? (
+                <>
+                  <Link to="/skill-swap" className="btn-primary">
+                    Start Learning
+                  </Link>
+                  <Link to="/mentorship" className="btn-secondary">
+                    Find Mentors
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/auth/signup" className="btn-primary">
+                    Get Started
+                  </Link>
+                  <Link to="/auth/signin" className="btn-secondary">
+                    Sign In
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         </div>
@@ -155,9 +170,15 @@ const HomePage: React.FC = () => {
             <p className="text-white/80 max-w-2xl mx-auto mb-8">
               Whether you're seeking knowledge or ready to share your expertise, AeonWise connects you with a community of learners and mentors.
             </p>
-            <Link to="/auth/signup" className="btn-primary">
-              Join The Community
-            </Link>
+            {user ? (
+              <Link to="/skill-swap" className="btn-primary">
+                Start Your Journey
+              </Link>
+            ) : (
+              <Link to="/auth/signup" className="btn-primary">
+                Join The Community
+              </Link>
+            )}
           </div>
         </div>
       </section>

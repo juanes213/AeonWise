@@ -21,7 +21,7 @@ import RankingPage from './pages/RankingPage';
 import TestPage from './pages/TestPage';
 import NotFoundPage from './pages/NotFoundPage';
 import StarfieldBackground from './components/effects/StarfieldBackground';
-import AuthGuard from './components/auth/AuthGuard';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
   console.log('App component rendering...');
@@ -33,36 +33,56 @@ function App() {
           <Router>
             <div className="flex flex-col min-h-screen bg-cosmic-black">
               <StarfieldBackground />
-              <Routes>
-                {/* Public auth routes */}
-                <Route path="/auth/signin" element={<SignInPage />} />
-                <Route path="/auth/signup" element={<SignUpPage />} />
-                
-                {/* Onboarding routes */}
-                <Route path="/onboarding/questionnaire" element={<OnboardingQuestionnaire />} />
-                <Route path="/onboarding/profile" element={<OnboardingProfile />} />
-                <Route path="/onboarding/recommendations" element={<OnboardingRecommendations />} />
-                
-                {/* Protected main app routes */}
-                <Route path="/*" element={
-                  <AuthGuard>
-                    <Navbar />
-                    <main className="flex-grow">
-                      <Routes>
-                        <Route path="/" element={<HomePage />} />
-                        <Route path="/skill-swap" element={<SkillSwapPage />} />
-                        <Route path="/mentorship" element={<MentorshipPage />} />
-                        <Route path="/courses" element={<CoursesPage />} />
-                        <Route path="/profile" element={<ProfilePage />} />
-                        <Route path="/ranking" element={<RankingPage />} />
-                        <Route path="/test" element={<TestPage />} />
-                        <Route path="*" element={<NotFoundPage />} />
-                      </Routes>
-                    </main>
-                    <Footer />
-                  </AuthGuard>
-                } />
-              </Routes>
+              <Navbar />
+              <main className="flex-grow">
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/auth/signin" element={<SignInPage />} />
+                  <Route path="/auth/signup" element={<SignUpPage />} />
+                  
+                  {/* Onboarding routes */}
+                  <Route path="/onboarding/questionnaire" element={<OnboardingQuestionnaire />} />
+                  <Route path="/onboarding/profile" element={<OnboardingProfile />} />
+                  <Route path="/onboarding/recommendations" element={<OnboardingRecommendations />} />
+                  
+                  {/* Protected routes */}
+                  <Route path="/skill-swap" element={
+                    <ProtectedRoute>
+                      <SkillSwapPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/mentorship" element={
+                    <ProtectedRoute>
+                      <MentorshipPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/courses" element={
+                    <ProtectedRoute>
+                      <CoursesPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/profile" element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/ranking" element={
+                    <ProtectedRoute>
+                      <RankingPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/test" element={
+                    <ProtectedRoute>
+                      <TestPage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* 404 route */}
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </main>
+              <Footer />
               <Toaster />
             </div>
           </Router>
