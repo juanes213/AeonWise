@@ -151,7 +151,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setIsLoading(false);
       } else if (event === 'TOKEN_REFRESHED' && session) {
-        // Refresh user data when token is refreshed
         await refreshUser();
         setIsLoading(false);
       }
@@ -173,24 +172,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
-        // Handle email not confirmed error
-        if (error.message === 'Email not confirmed') {
-          // For our simplified flow, we'll treat this as a successful login
-          // and manually confirm the email
-          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({ 
-            email, 
-            password 
-          });
-          
-          if (retryError && retryError.message !== 'Email not confirmed') {
-            throw retryError;
-          }
-          
-          // If we get here, the credentials are correct, just email not confirmed
-          // We'll handle this in the auth context
-        } else {
-          throw error;
-        }
+        throw error;
       }
 
       if (data.user) {
@@ -221,21 +203,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      // Create the auth user with username in metadata
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
           data: { username },
-          emailRedirectTo: undefined // Disable email confirmation redirect
+          emailRedirectTo: undefined
         }
       });
       
       if (error) throw error;
 
-      // The profile will be created automatically by the database trigger
-      // when the user is confirmed and signed in
-      
       return { error: null };
     } catch (error) {
       console.error('Error signing up:', error);
@@ -294,7 +272,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Don't render children until user context is initialized
   if (!initialized) {
     return null;
   }

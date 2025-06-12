@@ -39,11 +39,9 @@ const OnboardingProfile: React.FC = () => {
   const { user, updateProfile } = useUser();
   const { toast } = useToast();
   
-  // User info from previous step
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   
-  // Work Experience
   const [workExperience, setWorkExperience] = useState<WorkExperience[]>([]);
   const [newExperience, setNewExperience] = useState<WorkExperience>({
     jobTitle: '',
@@ -52,13 +50,11 @@ const OnboardingProfile: React.FC = () => {
     responsibilities: ''
   });
 
-  // Skills
   const [technicalSkills, setTechnicalSkills] = useState<string[]>([]);
   const [softSkills, setSoftSkills] = useState<string[]>([]);
   const [newTechnicalSkill, setNewTechnicalSkill] = useState('');
   const [newSoftSkill, setNewSoftSkill] = useState('');
 
-  // Projects
   const [projects, setProjects] = useState<Project[]>([]);
   const [newProject, setNewProject] = useState<Project>({
     name: '',
@@ -67,7 +63,6 @@ const OnboardingProfile: React.FC = () => {
   });
   const [newTechnology, setNewTechnology] = useState('');
 
-  // Certifications
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [newCertification, setNewCertification] = useState<Certification>({
     name: '',
@@ -78,7 +73,6 @@ const OnboardingProfile: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check if user is authenticated
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -89,7 +83,6 @@ const OnboardingProfile: React.FC = () => {
       return;
     }
 
-    // Load user info from localStorage
     if (!dataLoaded) {
       const storedUserInfo = localStorage.getItem('onboarding_user_info');
       if (!storedUserInfo) {
@@ -118,7 +111,6 @@ const OnboardingProfile: React.FC = () => {
     }
   }, [dataLoaded, navigate, toast, user]);
 
-  // Work Experience Functions
   const addWorkExperience = () => {
     if (newExperience.jobTitle && newExperience.company) {
       setWorkExperience([...workExperience, newExperience]);
@@ -130,7 +122,6 @@ const OnboardingProfile: React.FC = () => {
     setWorkExperience(workExperience.filter((_, i) => i !== index));
   };
 
-  // Skills Functions
   const addTechnicalSkill = () => {
     if (newTechnicalSkill.trim() && !technicalSkills.includes(newTechnicalSkill.trim())) {
       setTechnicalSkills([...technicalSkills, newTechnicalSkill.trim()]);
@@ -153,7 +144,6 @@ const OnboardingProfile: React.FC = () => {
     setSoftSkills(softSkills.filter((_, i) => i !== index));
   };
 
-  // Projects Functions
   const addTechnology = () => {
     if (newTechnology.trim() && !newProject.technologies.includes(newTechnology.trim())) {
       setNewProject({
@@ -182,7 +172,6 @@ const OnboardingProfile: React.FC = () => {
     setProjects(projects.filter((_, i) => i !== index));
   };
 
-  // Certifications Functions
   const addCertification = () => {
     if (newCertification.name && newCertification.organization) {
       setCertifications([...certifications, newCertification]);
@@ -197,17 +186,10 @@ const OnboardingProfile: React.FC = () => {
   const calculatePoints = () => {
     let points = 0;
     
-    // Experience points (50 per job)
     points += workExperience.length * 50;
-    
-    // Skills points (10 per technical skill, 5 per soft skill)
     points += technicalSkills.length * 10;
     points += softSkills.length * 5;
-    
-    // Project points (30 per project)
     points += projects.length * 30;
-    
-    // Certification points (40 per certification)
     points += certifications.length * 40;
     
     return points;
@@ -236,7 +218,6 @@ const OnboardingProfile: React.FC = () => {
     setLoading(true);
 
     try {
-      // Calculate points and prepare profile data
       const allSkills = [...technicalSkills, ...softSkills];
       const calculatedPoints = calculatePoints();
       const bio = `Experienced professional with ${workExperience.length} work experiences, ${projects.length} projects, and ${certifications.length} certifications.`;
@@ -247,7 +228,6 @@ const OnboardingProfile: React.FC = () => {
         bio: bio,
       });
 
-      // Update user profile with all collected information
       const { error } = await updateProfile({
         skills: allSkills,
         points: calculatedPoints,
@@ -259,7 +239,6 @@ const OnboardingProfile: React.FC = () => {
         throw error;
       }
 
-      // Store complete profile data for recommendations
       localStorage.setItem('onboarding_complete_profile', JSON.stringify({
         userInfo,
         workExperience,
@@ -272,7 +251,6 @@ const OnboardingProfile: React.FC = () => {
         bio,
       }));
 
-      // Clear the temporary user info
       localStorage.removeItem('onboarding_user_info');
 
       toast({
@@ -280,7 +258,6 @@ const OnboardingProfile: React.FC = () => {
         description: `Your cosmic profile has been created with ${calculatedPoints} points!`,
       });
 
-      // Wait a moment for the profile to be updated
       setTimeout(() => {
         navigate('/onboarding/recommendations');
       }, 1000);
@@ -304,7 +281,6 @@ const OnboardingProfile: React.FC = () => {
     }
   };
 
-  // Show loading while data is being loaded
   if (!dataLoaded || !userInfo || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -404,7 +380,6 @@ const OnboardingProfile: React.FC = () => {
               Skills
             </h2>
 
-            {/* Technical Skills */}
             <div className="mb-6">
               <h3 className="text-lg font-medium mb-3">Technical Skills</h3>
               <div className="flex gap-2 mb-4">
@@ -438,7 +413,6 @@ const OnboardingProfile: React.FC = () => {
               </div>
             </div>
 
-            {/* Soft Skills */}
             <div>
               <h3 className="text-lg font-medium mb-3">Soft Skills</h3>
               <div className="flex gap-2 mb-4">

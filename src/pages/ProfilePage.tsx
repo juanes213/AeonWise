@@ -27,14 +27,13 @@ const ProfilePage: React.FC = () => {
   const [newGoal, setNewGoal] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Redirect if not logged in
   React.useEffect(() => {
     if (!user && !isLoading) {
       toast({
         title: 'Authentication Required',
         description: 'Please sign in to view your profile',
       });
-      navigate('/auth/signup');
+      navigate('/auth/signin');
     }
   }, [user, isLoading, navigate, toast]);
 
@@ -44,7 +43,6 @@ const ProfilePage: React.FC = () => {
 
   const handleCancelEditing = () => {
     setIsEditing(false);
-    // Reset to original values
     setEditedProfile({
       bio: user?.bio || '',
       skills: user?.skills || [],
@@ -117,7 +115,6 @@ const ProfilePage: React.FC = () => {
       
       setIsEditing(false);
       
-      // Update profile using the context
       if (updateProfile) {
         updateProfile(editedProfile);
       }
@@ -208,7 +205,6 @@ const ProfilePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Left Column - Profile Overview */}
             <div className="md:col-span-1">
               <div className="flex flex-col items-center text-center mb-6">
                 <div className="w-24 h-24 rounded-full bg-cosmic-purple-800/50 flex items-center justify-center mb-4 relative">
@@ -246,9 +242,7 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Column - Details & Editable Fields */}
             <div className="md:col-span-2">
-              {/* Bio */}
               <div className="mb-8">
                 <h3 className="text-lg font-display mb-3">Bio</h3>
                 {isEditing ? (
@@ -266,7 +260,6 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
 
-              {/* Skills */}
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-display flex items-center">
@@ -316,7 +309,6 @@ const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Learning Goals */}
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-display flex items-center">
@@ -366,7 +358,6 @@ const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Verification Section */}
               <div className="mt-8 bg-cosmic-black/20 rounded-lg p-4">
                 <div className="flex items-center mb-4">
                   <BadgeCheck className="h-5 w-5 text-cosmic-gold-400 mr-2" />

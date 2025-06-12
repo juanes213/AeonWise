@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Lock, Mail } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useUser } from '../../contexts/UserContext';
 import { useToast } from '../../hooks/useToast';
 
 interface AuthFormProps {
@@ -10,7 +10,7 @@ interface AuthFormProps {
 
 export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn } = useUser();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -26,20 +26,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     try {
       const { error } = await signIn(formData.email, formData.password);
       if (error) {
-        // Handle specific error cases
-        if (error.message === 'Invalid login credentials') {
-          throw new Error('Invalid email or password. Please check your credentials and try again.');
-        } else if (error.message === 'Email not confirmed') {
-          // For our simplified flow, we'll show a success message
-          toast({
-            title: 'Welcome back!',
-            description: 'Successfully signed in to your cosmic journey',
-          });
-          navigate('/');
-          return;
-        } else {
-          throw error;
-        }
+        throw error;
       }
       
       toast({
@@ -47,7 +34,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         description: 'Successfully signed in to your cosmic journey',
       });
 
-      // Clear form data after successful sign in
       setFormData({
         email: '',
         password: '',
