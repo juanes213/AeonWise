@@ -162,13 +162,40 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .single();
               
             if (!error && profile) {
+              console.log('Profile loaded after sign in:', profile);
               setUser({
                 ...profile,
                 rank: calculateRank(profile.points)
               });
+            } else {
+              console.log('No profile found after sign in, creating basic user object');
+              // Create a basic user object if no profile exists
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+                points: 0,
+                rank: 'starspark',
+                skills: [],
+                learning_goals: [],
+                bio: '',
+                created_at: new Date().toISOString()
+              });
             }
           } catch (error) {
             console.error('Error loading user profile:', error);
+            // Still set a basic user object to prevent infinite loading
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+              points: 0,
+              rank: 'starspark',
+              skills: [],
+              learning_goals: [],
+              bio: '',
+              created_at: new Date().toISOString()
+            });
           } finally {
             setIsLoading(false);
           }
@@ -184,6 +211,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription = authSubscription;
     } catch (error) {
       console.error('Error setting up auth listener:', error);
+      if (mounted) {
+        setInitialized(true);
+        setIsLoading(false);
+      }
     }
 
     return () => {
@@ -308,7 +339,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('UserProvider not initialized yet');
     return (
       <div className="min-h-screen bg-cosmic-black flex items-center justify-center">
-        <div className="text-white">Loading AeonWise...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cosmic-purple-500 mx-auto mb-4"></div>
+          <div className="text-white">Loading AeonWise...</div>
+        </div>
       </div>
     );
   }
