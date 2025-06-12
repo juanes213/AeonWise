@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { Calendar, Clock, DollarSign, Star, Sparkles } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
-import { Calendar, Clock, DollarSign, Volume2, Play, Sparkles } from 'lucide-react';
-import { getRankBadgeClass } from '../lib/utils';
-import { RankBadge } from '../components/ranks/RankBadge';
 
 interface Mentor {
   id: string;
   name: string;
-  rank: string;
-  category: string;
   specialty: string;
   price: number;
   currency: string;
@@ -20,150 +15,118 @@ interface Mentor {
   availability: string;
   bio: string;
   imageUrl: string;
-  ipfsHash?: string;
+  skills: string[];
 }
-
-const categories = [
-  'All Categories',
-  'Programming',
-  'Design',
-  'Business',
-  'Marketing',
-  'Data Science',
-  'Language',
-  'Music',
-  'Fitness',
-];
 
 const mentors: Mentor[] = [
   {
     id: '1',
-    name: 'Alexandria',
-    rank: 'cosmic_sage',
-    category: 'Data Science',
+    name: 'Dr. Alexandria Chen',
     specialty: 'Machine Learning & AI',
     price: 120,
     currency: 'USD',
     sessions: 152,
     rating: 4.9,
     sessionLength: 60,
-    availability: 'Mon-Fri, 2-6pm',
-    bio: 'Data scientist with 15 years of experience in machine learning, neural networks, and AI applications. Specialized in predictive modeling and natural language processing.',
+    availability: 'Mon-Fri, 2-6pm EST',
+    bio: 'Data scientist with 15 years of experience in machine learning, neural networks, and AI applications. Specialized in predictive modeling and natural language processing. Former lead at Google AI.',
     imageUrl: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
-    ipfsHash: 'Qm123456789abcdef',
+    skills: ['Python', 'TensorFlow', 'PyTorch', 'Deep Learning', 'NLP']
   },
   {
     id: '2',
-    name: 'Marcus',
-    rank: 'galactic_guide',
-    category: 'Programming',
+    name: 'Marcus Rodriguez',
     specialty: 'Full-Stack Development',
     price: 95,
     currency: 'USD',
     sessions: 87,
     rating: 4.7,
     sessionLength: 45,
-    availability: 'Wed-Sun, 10am-4pm',
-    bio: 'Full-stack developer with extensive experience in React, Node.js, and cloud architectures. Helped scale multiple startups from concept to production.',
+    availability: 'Wed-Sun, 10am-4pm EST',
+    bio: 'Full-stack developer with extensive experience in React, Node.js, and cloud architectures. Helped scale multiple startups from concept to production. Expert in modern web technologies.',
     imageUrl: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
-    ipfsHash: 'Qm987654321fedcba',
+    skills: ['React', 'Node.js', 'TypeScript', 'AWS', 'MongoDB']
   },
   {
     id: '3',
-    name: 'Sophia',
-    rank: 'comet_crafter',
-    category: 'Design',
-    specialty: 'UX/UI & Psychology',
+    name: 'Sophia Williams',
+    specialty: 'UX/UI Design & Psychology',
     price: 110,
     currency: 'USD',
     sessions: 203,
     rating: 5.0,
     sessionLength: 60,
-    availability: 'Tue-Sat, 12-8pm',
-    bio: 'Award-winning UX designer with a background in cognitive psychology. Specializes in creating intuitive, accessible interfaces for complex applications.',
+    availability: 'Tue-Sat, 12-8pm EST',
+    bio: 'Award-winning UX designer with a background in cognitive psychology. Specializes in creating intuitive, accessible interfaces for complex applications. Design lead at top tech companies.',
     imageUrl: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
-    ipfsHash: 'Qm567890abcdefg',
+    skills: ['Figma', 'User Research', 'Prototyping', 'Design Systems', 'Psychology']
   },
   {
     id: '4',
-    name: 'Julian',
-    rank: 'astral_apprentice',
-    category: 'Music',
+    name: 'Julian Thompson',
     specialty: 'Music Theory & Composition',
     price: 80,
     currency: 'USD',
     sessions: 64,
     rating: 4.8,
     sessionLength: 45,
-    availability: 'Mon-Wed, 6-10pm',
-    bio: 'Classically trained composer with a modern approach to music theory. Teaches composition, arrangement, and production for all genres.',
+    availability: 'Mon-Wed, 6-10pm EST',
+    bio: 'Classically trained composer with a modern approach to music theory. Teaches composition, arrangement, and production for all genres. Graduate of Berklee College of Music.',
     imageUrl: 'https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg',
-    ipfsHash: 'Qm345678hijklmn',
+    skills: ['Music Theory', 'Composition', 'Piano', 'Logic Pro', 'Orchestration']
   },
   {
     id: '5',
-    name: 'Elena',
-    rank: 'cosmic_sage',
-    category: 'Business',
-    specialty: 'Entrepreneurship & Funding',
+    name: 'Elena Vasquez',
+    specialty: 'Entrepreneurship & Business Strategy',
     price: 150,
     currency: 'USD',
     sessions: 127,
     rating: 4.9,
     sessionLength: 90,
-    availability: 'Thu-Sun, 9am-5pm',
-    bio: 'Serial entrepreneur who has founded three successful tech startups. Expertise in business model development, fundraising, and strategic growth.',
+    availability: 'Thu-Sun, 9am-5pm EST',
+    bio: 'Serial entrepreneur who has founded three successful tech startups. Expertise in business model development, fundraising, and strategic growth. Former venture capital partner.',
     imageUrl: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg',
-    ipfsHash: 'Qm789012pqrstuv',
+    skills: ['Business Strategy', 'Fundraising', 'Leadership', 'Marketing', 'Operations']
   },
   {
     id: '6',
-    name: 'Raj',
-    rank: 'galactic_guide',
-    category: 'Programming',
-    specialty: 'Algorithms & System Design',
+    name: 'Raj Patel',
+    specialty: 'System Design & Architecture',
     price: 130,
     currency: 'USD',
     sessions: 176,
     rating: 4.9,
     sessionLength: 60,
-    availability: 'Mon-Fri, 7-11pm',
-    bio: 'Principal engineer at a major tech company with expertise in distributed systems and algorithm optimization. Author of two books on system design.',
+    availability: 'Mon-Fri, 7-11pm EST',
+    bio: 'Principal engineer at a major tech company with expertise in distributed systems and algorithm optimization. Author of two books on system design. 20+ years in tech.',
     imageUrl: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg',
-    ipfsHash: 'Qm901234wxyzabc',
-  },
+    skills: ['System Design', 'Algorithms', 'Distributed Systems', 'Scalability', 'Architecture']
+  }
+];
+
+const categories = [
+  'All Categories',
+  'Programming',
+  'Design',
+  'Business',
+  'Music',
+  'Data Science',
+  'AI & Machine Learning'
 ];
 
 const MentorshipPage: React.FC = () => {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
   const [showModal, setShowModal] = useState(false);
 
   const filteredMentors = selectedCategory === 'All Categories'
     ? mentors
-    : mentors.filter(mentor => mentor.category === selectedCategory);
-
-  const playIntroduction = (mentorId: string) => {
-    if (playingAudio === mentorId) {
-      setPlayingAudio(null);
-      toast({
-        title: 'Audio stopped',
-      });
-    } else {
-      setPlayingAudio(mentorId);
-      toast({
-        title: 'Playing introduction',
-        description: 'This would play the mentor\'s audio introduction in a real app',
-      });
-      
-      setTimeout(() => {
-        setPlayingAudio(null);
-      }, 5000);
-    }
-  };
+    : mentors.filter(mentor => 
+        mentor.specialty.toLowerCase().includes(selectedCategory.toLowerCase()) ||
+        mentor.skills.some(skill => skill.toLowerCase().includes(selectedCategory.toLowerCase()))
+      );
 
   const bookSession = (mentor: Mentor) => {
     setSelectedMentor(mentor);
@@ -201,15 +164,15 @@ const MentorshipPage: React.FC = () => {
     <div className="pt-24 pb-20 px-4">
       <div className="container mx-auto max-w-7xl">
         <div className="text-center mb-12">
-          <h1 className="font-display mb-4">{t('mentorship.title')}</h1>
+          <h1 className="font-display mb-4">Find a Mentor</h1>
           <p className="text-white/80 max-w-2xl mx-auto">
-            {t('mentorship.description')}
+            Learn directly from experts in your field. Get personalized guidance and accelerate your learning journey.
           </p>
         </div>
 
         {/* Categories */}
         <div className="mb-12">
-          <h2 className="text-xl font-display mb-6">{t('mentorship.categories')}</h2>
+          <h2 className="text-xl font-display mb-6">Categories</h2>
           <div className="flex flex-wrap gap-3">
             {categories.map((category) => (
               <button
@@ -230,7 +193,7 @@ const MentorshipPage: React.FC = () => {
         {/* Mentors List */}
         {filteredMentors.length === 0 ? (
           <div className="text-center py-12 text-white/70">
-            {t('mentorship.noMentors')}
+            No mentors found in this category yet.
           </div>
         ) : (
           <motion.div
@@ -251,43 +214,40 @@ const MentorshipPage: React.FC = () => {
                     alt={mentor.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute top-4 right-4">
-                    <RankBadge rank={mentor.rank} points={0} />
+                  <div className="absolute top-4 right-4 bg-cosmic-black/70 px-2 py-1 rounded-full flex items-center">
+                    <Star className="h-3 w-3 text-yellow-400 mr-1" />
+                    <span className="text-xs text-white">{mentor.rating}</span>
                   </div>
                 </div>
 
                 <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-display">{mentor.name}</h3>
-                      <p className="text-cosmic-gold-400 text-sm">{mentor.specialty}</p>
-                    </div>
-                    <button
-                      onClick={() => playIntroduction(mentor.id)}
-                      className={`p-2 rounded-full ${
-                        playingAudio === mentor.id
-                          ? 'bg-cosmic-gold-500 text-white animate-pulse'
-                          : 'bg-cosmic-purple-800/50 text-white/70 hover:bg-cosmic-purple-700'
-                      } transition-colors`}
-                      aria-label="Play introduction"
-                    >
-                      {playingAudio === mentor.id ? (
-                        <Volume2 className="h-5 w-5" />
-                      ) : (
-                        <Play className="h-5 w-5" />
-                      )}
-                    </button>
+                  <div className="mb-4">
+                    <h3 className="text-xl font-display">{mentor.name}</h3>
+                    <p className="text-cosmic-gold-400 text-sm">{mentor.specialty}</p>
                   </div>
 
-                  <p className="text-white/70 text-sm mb-6 line-clamp-3">
+                  <p className="text-white/70 text-sm mb-4 line-clamp-3">
                     {mentor.bio}
                   </p>
+
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {mentor.skills.slice(0, 3).map((skill, index) => (
+                        <span key={index} className="text-xs bg-cosmic-purple-900/50 text-cosmic-purple-100 px-2 py-1 rounded">
+                          {skill}
+                        </span>
+                      ))}
+                      {mentor.skills.length > 3 && (
+                        <span className="text-xs text-gray-400">+{mentor.skills.length - 3} more</span>
+                      )}
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="flex items-center text-sm">
                       <DollarSign className="h-4 w-4 text-cosmic-gold-400 mr-2" />
                       <span>
-                        {mentor.price} {mentor.currency} / session
+                        ${mentor.price} / session
                       </span>
                     </div>
                     <div className="flex items-center text-sm">
@@ -296,27 +256,19 @@ const MentorshipPage: React.FC = () => {
                     </div>
                     <div className="flex items-center text-sm col-span-2">
                       <Calendar className="h-4 w-4 text-cosmic-gold-400 mr-2" />
-                      <span>{mentor.availability}</span>
+                      <span className="text-xs">{mentor.availability}</span>
                     </div>
                   </div>
-
-                  {mentor.ipfsHash && (
-                    <div className="mb-4 bg-cosmic-black/30 p-2 rounded-md">
-                      <p className="text-xs text-white/50 break-all">
-                        IPFS: {mentor.ipfsHash}
-                      </p>
-                    </div>
-                  )}
 
                   <div className="flex space-x-3">
                     <button
                       onClick={() => bookSession(mentor)}
                       className="btn-primary flex-1"
                     >
-                      {t('mentorship.bookSession')}
+                      Book Session
                     </button>
                     <button className="btn-secondary flex-1">
-                      {t('mentorship.viewProfile')}
+                      View Profile
                     </button>
                   </div>
                 </div>
@@ -333,7 +285,7 @@ const MentorshipPage: React.FC = () => {
             Are you an expert in your field? Join our community of mentors and help others on their journey to mastery.
           </p>
           <button className="btn-primary">
-            {t('mentorship.becomeMentor')}
+            Become a Mentor
           </button>
         </div>
       </div>
@@ -353,7 +305,10 @@ const MentorshipPage: React.FC = () => {
                 />
                 <div>
                   <p className="text-cosmic-gold-400">{selectedMentor.specialty}</p>
-                  <RankBadge rank={selectedMentor.rank} points={0} size="sm" />
+                  <div className="flex items-center">
+                    <Star className="h-3 w-3 text-yellow-400 mr-1" />
+                    <span className="text-xs">{selectedMentor.rating} ({selectedMentor.sessions} sessions)</span>
+                  </div>
                 </div>
               </div>
               
@@ -361,7 +316,7 @@ const MentorshipPage: React.FC = () => {
                 <div className="flex items-center text-sm">
                   <DollarSign className="h-4 w-4 text-cosmic-gold-400 mr-2" />
                   <span>
-                    {selectedMentor.price} {selectedMentor.currency}
+                    ${selectedMentor.price} {selectedMentor.currency}
                   </span>
                 </div>
                 <div className="flex items-center text-sm">

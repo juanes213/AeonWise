@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { BookOpen, Clock, BarChart4, BookOpenCheck } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
-import { BookOpen, Play, Volume2, Clock, BarChart4, BookOpenCheck } from 'lucide-react';
 
 interface Course {
   id: string;
@@ -18,10 +17,8 @@ interface Course {
 }
 
 const CoursesPage: React.FC = () => {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
-  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
 
   // Sample courses data
   const courses: Course[] = [
@@ -93,10 +90,31 @@ const CoursesPage: React.FC = () => {
       imageUrl: 'https://images.pexels.com/photos/907489/pexels-photo-907489.jpeg',
       enrolled: false,
     },
+    {
+      id: '7',
+      title: 'Digital Marketing Mastery',
+      description: 'Master digital marketing strategies including SEO, social media marketing, content marketing, and paid advertising campaigns.',
+      level: 'beginner',
+      duration: 8,
+      modules: 10,
+      category: 'Marketing',
+      imageUrl: 'https://images.pexels.com/photos/265087/pexels-photo-265087.jpeg',
+      enrolled: false,
+    },
+    {
+      id: '8',
+      title: 'Photography Fundamentals',
+      description: 'Learn the art and science of photography. Master composition, lighting, camera settings, and post-processing techniques.',
+      level: 'beginner',
+      duration: 6,
+      modules: 8,
+      category: 'Photography',
+      imageUrl: 'https://images.pexels.com/photos/606541/pexels-photo-606541.jpeg',
+      enrolled: false,
+    },
   ];
 
   const myCourses = courses.filter(course => course.enrolled);
-
   const displayedCourses = activeTab === 'all' ? courses : myCourses;
 
   const enrollCourse = (courseId: string) => {
@@ -104,27 +122,6 @@ const CoursesPage: React.FC = () => {
       title: 'Enrolled Successfully',
       description: 'You have been enrolled in the course',
     });
-  };
-
-  const playIntroduction = (courseId: string) => {
-    // In a real app, this would play the ElevenLabs-generated audio
-    if (playingAudio === courseId) {
-      setPlayingAudio(null);
-      toast({
-        title: 'Audio stopped',
-      });
-    } else {
-      setPlayingAudio(courseId);
-      toast({
-        title: 'Playing introduction',
-        description: 'This would play the course introduction in a real app',
-      });
-      
-      // Simulate audio playing for 5 seconds
-      setTimeout(() => {
-        setPlayingAudio(null);
-      }, 5000);
-    }
   };
 
   const continueCourse = (courseId: string) => {
@@ -170,9 +167,9 @@ const CoursesPage: React.FC = () => {
     <div className="pt-24 pb-20 px-4">
       <div className="container mx-auto max-w-7xl">
         <div className="text-center mb-12">
-          <h1 className="font-display mb-4">{t('courses.title')}</h1>
+          <h1 className="font-display mb-4">Courses</h1>
           <p className="text-white/80 max-w-2xl mx-auto">
-            {t('courses.description')}
+            Learn at your own pace with our comprehensive course library. From beginner to advanced levels.
           </p>
         </div>
 
@@ -187,7 +184,7 @@ const CoursesPage: React.FC = () => {
               }`}
               onClick={() => setActiveTab('all')}
             >
-              {t('courses.allCourses')}
+              All Courses
             </button>
             <button
               className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -197,7 +194,7 @@ const CoursesPage: React.FC = () => {
               }`}
               onClick={() => setActiveTab('my')}
             >
-              {t('courses.myCourses')}
+              My Courses
             </button>
           </div>
         </div>
@@ -231,21 +228,6 @@ const CoursesPage: React.FC = () => {
                       {course.level.charAt(0).toUpperCase() + course.level.slice(1)}
                     </span>
                   </div>
-                  <button
-                    onClick={() => playIntroduction(course.id)}
-                    className={`absolute bottom-4 right-4 p-3 rounded-full ${
-                      playingAudio === course.id
-                        ? 'bg-cosmic-gold-500 text-white animate-pulse'
-                        : 'bg-cosmic-black/70 text-white/90 hover:bg-cosmic-purple-700'
-                    } transition-colors`}
-                    aria-label="Play introduction"
-                  >
-                    {playingAudio === course.id ? (
-                      <Volume2 className="h-5 w-5" />
-                    ) : (
-                      <Play className="h-5 w-5" />
-                    )}
-                  </button>
                 </div>
 
                 <div className="p-6">
@@ -290,14 +272,14 @@ const CoursesPage: React.FC = () => {
                       className="btn-primary w-full flex items-center justify-center"
                     >
                       <BookOpenCheck className="h-4 w-4 mr-2" />
-                      {course.progress ? t('courses.continueLearning') : t('courses.startLearning')}
+                      {course.progress ? 'Continue Learning' : 'Start Learning'}
                     </button>
                   ) : (
                     <button
                       onClick={() => enrollCourse(course.id)}
                       className="btn-primary w-full"
                     >
-                      {t('courses.enroll')}
+                      Enroll
                     </button>
                   )}
                 </div>

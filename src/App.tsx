@@ -10,15 +10,11 @@ import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
 import SignInPage from './pages/auth/SignInPage';
 import SignUpPage from './pages/auth/SignUpPage';
-import OnboardingQuestionnaire from './pages/onboarding/OnboardingQuestionnaire';
-import OnboardingProfile from './pages/onboarding/OnboardingProfile';
-import OnboardingRecommendations from './pages/onboarding/OnboardingRecommendations';
 import SkillSwapPage from './pages/SkillSwapPage';
 import MentorshipPage from './pages/MentorshipPage';
 import CoursesPage from './pages/CoursesPage';
 import ProfilePage from './pages/ProfilePage';
 import RankingPage from './pages/RankingPage';
-import TestPage from './pages/TestPage';
 import NotFoundPage from './pages/NotFoundPage';
 import StarfieldBackground from './components/effects/StarfieldBackground';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -40,11 +36,6 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/auth/signin" element={<SignInPage />} />
                   <Route path="/auth/signup" element={<SignUpPage />} />
-                  
-                  {/* Onboarding routes */}
-                  <Route path="/onboarding/questionnaire" element={<OnboardingQuestionnaire />} />
-                  <Route path="/onboarding/profile" element={<OnboardingProfile />} />
-                  <Route path="/onboarding/recommendations" element={<OnboardingRecommendations />} />
                   
                   {/* Protected routes */}
                   <Route path="/skill-swap" element={
@@ -70,11 +61,6 @@ function App() {
                   <Route path="/ranking" element={
                     <ProtectedRoute>
                       <RankingPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/test" element={
-                    <ProtectedRoute>
-                      <TestPage />
                     </ProtectedRoute>
                   } />
                   

@@ -216,6 +216,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
+      // First create the auth user
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -226,6 +227,27 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) throw error;
+
+      // If user was created, create their profile
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: email,
+            username: username,
+            points: 0,
+            skills: [],
+            learning_goals: [],
+            bio: '',
+            created_at: new Date().toISOString()
+          });
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          // Don't throw here, user can complete profile later
+        }
+      }
 
       return { error: null };
     } catch (error) {
