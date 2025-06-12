@@ -24,6 +24,8 @@ import StarfieldBackground from './components/effects/StarfieldBackground';
 import AuthGuard from './components/auth/AuthGuard';
 
 function App() {
+  console.log('App component rendering...');
+  
   return (
     <I18nextProvider i18n={i18n}>
       <SupabaseProvider>

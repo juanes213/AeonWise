@@ -5,8 +5,10 @@ import { Sparkles } from 'lucide-react';
 import { AuthForm } from '../../components/auth/AuthForm';
 
 const SignInPage: React.FC = () => {
+  console.log('SignInPage rendering...');
+  
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen bg-cosmic-black flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -16,7 +18,7 @@ const SignInPage: React.FC = () => {
         <div className="cosmos-card p-8">
           <div className="text-center mb-8">
             <Sparkles className="h-12 w-12 text-cosmic-gold-400 mx-auto mb-4" />
-            <h1 className="text-3xl font-display mb-2">Welcome to AeonWise</h1>
+            <h1 className="text-3xl font-display mb-2 text-white">Welcome to AeonWise</h1>
             <p className="text-gray-400">
               Sign in to continue your cosmic learning journey
             </p>

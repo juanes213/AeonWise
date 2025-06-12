@@ -6,6 +6,8 @@ import { BookOpen, Users, Sparkles, Trophy } from 'lucide-react';
 
 const HomePage: React.FC = () => {
   const { t } = useTranslation();
+  
+  console.log('HomePage rendering...');
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -27,10 +29,9 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="pt-20">
+    <div className="pt-20 bg-cosmic-black text-white min-h-screen">
       {/* Hero Section */}
       <section className="py-20 md:py-32 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-cosmos opacity-20 z-0"></div>
         <div className="container mx-auto relative z-10">
           <motion.div 
             className="max-w-3xl mx-auto text-center"
@@ -38,19 +39,19 @@ const HomePage: React.FC = () => {
             animate="visible"
             variants={fadeIn}
           >
-            <h1 className="font-display mb-6 leading-tight">
-              <span className="block text-white">{t('home.hero.title')}</span>
-              <span className="magic-text">{t('home.hero.subtitle')}</span>
+            <h1 className="font-display mb-6 leading-tight text-4xl md:text-6xl">
+              <span className="block text-white">Unlock your potential with AeonWise</span>
+              <span className="magic-text">Share skills, find mentors, and accelerate your learning journey</span>
             </h1>
             <p className="text-white/80 text-xl mb-8 max-w-2xl mx-auto">
               Join our mystical community of mentors and learners to exchange knowledge, grow your skills, and discover new talents.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link to="/skill-swap" className="btn-primary">
-                {t('home.hero.cta')}
+                Get Started
               </Link>
               <Link to="/mentorship" className="btn-secondary">
-                {t('nav.mentorship')}
+                Find Mentors
               </Link>
             </div>
           </motion.div>
@@ -61,7 +62,7 @@ const HomePage: React.FC = () => {
       <section className="py-20 px-4">
         <div className="container mx-auto">
           <motion.h2 
-            className="text-center font-display mb-16 magic-text"
+            className="text-center font-display mb-16 magic-text text-3xl md:text-4xl"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
@@ -84,10 +85,10 @@ const HomePage: React.FC = () => {
                   <Users className="h-8 w-8 text-cosmic-gold-400" />
                 </div>
                 <h3 className="text-xl font-display mb-4">
-                  {t('home.features.skillSwap.title')}
+                  Skill Swap
                 </h3>
                 <p className="text-white/70">
-                  {t('home.features.skillSwap.description')}
+                  Exchange knowledge with others who have complementary skills
                 </p>
               </div>
             </motion.div>
@@ -101,10 +102,10 @@ const HomePage: React.FC = () => {
                   <Sparkles className="h-8 w-8 text-cosmic-gold-400" />
                 </div>
                 <h3 className="text-xl font-display mb-4">
-                  {t('home.features.mentorship.title')}
+                  Expert Mentorship
                 </h3>
                 <p className="text-white/70">
-                  {t('home.features.mentorship.description')}
+                  Learn directly from experienced mentors in your field
                 </p>
               </div>
             </motion.div>
@@ -118,10 +119,10 @@ const HomePage: React.FC = () => {
                   <BookOpen className="h-8 w-8 text-cosmic-gold-400" />
                 </div>
                 <h3 className="text-xl font-display mb-4">
-                  {t('home.features.courses.title')}
+                  AI-Generated Courses
                 </h3>
                 <p className="text-white/70">
-                  {t('home.features.courses.description')}
+                  Access personalized learning content created with AI
                 </p>
               </div>
             </motion.div>
@@ -135,10 +136,10 @@ const HomePage: React.FC = () => {
                   <Trophy className="h-8 w-8 text-cosmic-gold-400" />
                 </div>
                 <h3 className="text-xl font-display mb-4">
-                  {t('home.features.ranking.title')}
+                  Knowledge Ranking
                 </h3>
                 <p className="text-white/70">
-                  {t('home.features.ranking.description')}
+                  Build your expertise profile and climb the ranks
                 </p>
               </div>
             </motion.div>
@@ -146,97 +147,11 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Featured Mentors Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="font-display mb-4">Featured Mentors</h2>
-            <p className="text-white/70 max-w-2xl mx-auto">
-              Learn from our most respected masters across various disciplines. These mentors have achieved the highest ranks and are ready to guide you.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Mentor Card 1 */}
-            <div className="cosmos-card overflow-hidden group">
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-cosmic-gold-400 mb-4">
-                  <img 
-                    src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg" 
-                    alt="Alexandria"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="mt-2 mb-4">
-                  <span className="badge badge-master">Master</span>
-                </div>
-                <h3 className="text-xl font-display mb-2">Alexandria</h3>
-                <p className="text-cosmic-gold-400 text-sm mb-4">Data Science & AI</p>
-                <p className="text-white/70 text-sm mb-6">
-                  With 15 years of experience in data science and machine learning, Alexandria helps students unlock the secrets of AI.
-                </p>
-                <Link to="/mentorship" className="btn-secondary text-sm">
-                  View Profile
-                </Link>
-              </div>
-            </div>
-
-            {/* Mentor Card 2 */}
-            <div className="cosmos-card overflow-hidden group">
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-cosmic-gold-400 mb-4">
-                  <img 
-                    src="https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg" 
-                    alt="Marcus"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="mt-2 mb-4">
-                  <span className="badge badge-expert">Expert</span>
-                </div>
-                <h3 className="text-xl font-display mb-2">Marcus</h3>
-                <p className="text-cosmic-gold-400 text-sm mb-4">Full-Stack Development</p>
-                <p className="text-white/70 text-sm mb-6">
-                  Full-stack developer specializing in React and Node.js, with a decade of experience building web applications.
-                </p>
-                <Link to="/mentorship" className="btn-secondary text-sm">
-                  View Profile
-                </Link>
-              </div>
-            </div>
-
-            {/* Mentor Card 3 */}
-            <div className="cosmos-card overflow-hidden group">
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-cosmic-gold-400 mb-4">
-                  <img 
-                    src="https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg" 
-                    alt="Sophia"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="mt-2 mb-4">
-                  <span className="badge badge-master">Master</span>
-                </div>
-                <h3 className="text-xl font-display mb-2">Sophia</h3>
-                <p className="text-cosmic-gold-400 text-sm mb-4">UX Design & Psychology</p>
-                <p className="text-white/70 text-sm mb-6">
-                  Award-winning UX designer with a background in cognitive psychology, specializing in user-centered design.
-                </p>
-                <Link to="/mentorship" className="btn-secondary text-sm">
-                  View Profile
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto">
           <div className="cosmos-card p-12 text-center">
-            <h2 className="font-display mb-6 magic-text">Begin Your Journey of Wisdom</h2>
+            <h2 className="font-display mb-6 magic-text text-2xl md:text-3xl">Begin Your Journey of Wisdom</h2>
             <p className="text-white/80 max-w-2xl mx-auto mb-8">
               Whether you're seeking knowledge or ready to share your expertise, AeonWise connects you with a community of learners and mentors.
             </p>

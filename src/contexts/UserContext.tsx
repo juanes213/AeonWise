@@ -46,6 +46,8 @@ const calculateRank = (points: number): UserRank => {
 };
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('UserProvider rendering...');
+  
   const supabase = useSupabase();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +81,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initializeUser = async () => {
       try {
+        console.log('Initializing user...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -92,6 +95,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (session?.user && mounted) {
+          console.log('User session found:', session.user.id);
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -99,11 +103,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
             
           if (!error && profile && mounted) {
+            console.log('User profile loaded:', profile);
             setUser({
               ...profile,
               rank: calculateRank(profile.points)
             });
+          } else {
+            console.log('No profile found or error:', error);
           }
+        } else {
+          console.log('No user session');
         }
       } catch (error) {
         console.error('Error initializing user:', error);
@@ -273,8 +282,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   if (!initialized) {
-    return null;
+    console.log('UserProvider not initialized yet');
+    return (
+      <div className="min-h-screen bg-cosmic-black flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
   }
+
+  console.log('UserProvider initialized, user:', user?.username || 'none');
 
   return (
     <UserContext.Provider value={{ 
