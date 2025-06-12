@@ -110,37 +110,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 rank: calculateRank(profile.points)
               });
             } else {
-              console.log('No profile found, creating basic user object');
-              // Create a basic user object to prevent infinite loading
+              console.log('No profile found, user needs to complete setup');
               if (mounted) {
-                setUser({
-                  id: session.user.id,
-                  email: session.user.email || '',
-                  username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-                  points: 0,
-                  rank: 'starspark',
-                  skills: [],
-                  learning_goals: [],
-                  bio: '',
-                  created_at: new Date().toISOString()
-                });
+                setUser(null);
               }
             }
           } catch (profileError) {
             console.error('Error loading profile:', profileError);
-            // Still create a basic user to prevent infinite loading
             if (mounted) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-                points: 0,
-                rank: 'starspark',
-                skills: [],
-                learning_goals: [],
-                bio: '',
-                created_at: new Date().toISOString()
-              });
+              setUser(null);
             }
           }
         } else {
@@ -170,10 +148,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('User context auth state change:', event);
 
-      try {
-        if (event === 'SIGNED_IN' && session) {
-          setIsLoading(true);
-          
+      if (event === 'SIGNED_IN' && session) {
+        setIsLoading(true);
+        
+        try {
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -187,30 +165,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
               rank: calculateRank(profile.points)
             });
           } else {
-            console.log('No profile found after sign in, creating basic user object');
-            setUser({
-              id: session.user.id,
-              email: session.user.email || '',
-              username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-              points: 0,
-              rank: 'starspark',
-              skills: [],
-              learning_goals: [],
-              bio: '',
-              created_at: new Date().toISOString()
-            });
+            console.log('No profile found after sign in');
+            setUser(null);
           }
-          setIsLoading(false);
-        } else if (event === 'SIGNED_OUT') {
+        } catch (error) {
+          console.error('Error loading profile after sign in:', error);
           setUser(null);
-          setIsLoading(false);
-        } else if (event === 'TOKEN_REFRESHED' && session) {
-          // Don't set loading for token refresh, just update user if needed
-          await refreshUser();
         }
-      } catch (error) {
-        console.error('Error in auth state change:', error);
+        
         setIsLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsLoading(false);
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Don't change loading state for token refresh
+        console.log('Token refreshed, keeping current state');
       }
     });
 
@@ -233,34 +202,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      if (data.user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-          
-        if (!profileError && profile) {
-          setUser({
-            ...profile,
-            rank: calculateRank(profile.points)
-          });
-        } else {
-          // Create basic user object if no profile
-          setUser({
-            id: data.user.id,
-            email: data.user.email || '',
-            username: data.user.user_metadata?.username || data.user.email?.split('@')[0] || '',
-            points: 0,
-            rank: 'starspark',
-            skills: [],
-            learning_goals: [],
-            bio: '',
-            created_at: new Date().toISOString()
-          });
-        }
-      }
-
+      // Don't set user here, let the auth state change handler do it
       return { error: null };
     } catch (error) {
       console.error('Error signing in:', error);
