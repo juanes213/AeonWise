@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, 
   MessageCircle, Send, BookOpen, Code, CheckCircle, 
-  RotateCcw, Lightbulb, Clock, User
+  RotateCcw, Lightbulb, Clock, User, AlertCircle
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { marked } from 'marked';
@@ -45,6 +45,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
+  const [audioAvailable, setAudioAvailable] = useState(true);
   const [code, setCode] = useState('');
   const [showQA, setShowQA] = useState(false);
   const [qaMessages, setQaMessages] = useState<QAMessage[]>([]);
@@ -194,17 +195,43 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
         body: JSON.stringify({ text }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate audio');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Check if it's an API key configuration error
+        if (errorData.error?.includes('API key not configured') || 
+            errorData.error?.includes('ElevenLabs API key')) {
+          setAudioAvailable(false);
+          toast({
+            title: 'Audio Unavailable',
+            description: 'Audio narration is currently unavailable. You can still read the lesson content.',
+            variant: 'destructive',
+          });
+          return null;
+        }
+        
+        throw new Error(errorData.error || 'Failed to generate audio');
+      }
 
       const blob = await response.blob();
       return URL.createObjectURL(blob);
     } catch (error) {
       console.error('Error generating audio:', error);
-      toast({
-        title: 'Audio Error',
-        description: 'Failed to generate audio narration',
-        variant: 'destructive',
-      });
+      
+      // Check if it's a network or configuration error
+      if (error.message.includes('API key') || error.message.includes('configuration')) {
+        setAudioAvailable(false);
+        toast({
+          title: 'Audio Service Unavailable',
+          description: 'Audio narration is temporarily unavailable. Please continue with reading the lesson.',
+        });
+      } else {
+        toast({
+          title: 'Audio Error',
+          description: 'Failed to generate audio narration',
+          variant: 'destructive',
+        });
+      }
       return null;
     } finally {
       setAudioLoading(false);
@@ -215,6 +242,14 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     if (currentAudio && !currentAudio.paused) {
       currentAudio.pause();
       setIsPlaying(false);
+      return;
+    }
+
+    if (!audioAvailable) {
+      toast({
+        title: 'Audio Unavailable',
+        description: 'Audio narration service is currently unavailable.',
+      });
       return;
     }
 
@@ -272,8 +307,11 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
       const data = await response.json();
       
-      // Generate audio for the answer
-      const audioUrl = await generateAudio(data.answer);
+      // Only try to generate audio if the service is available
+      let audioUrl = null;
+      if (audioAvailable) {
+        audioUrl = await generateAudio(data.answer);
+      }
       
       const assistantMessage: QAMessage = {
         id: (Date.now() + 1).toString(),
@@ -352,6 +390,19 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
           </div>
         </div>
 
+        {/* Audio Service Warning */}
+        {!audioAvailable && (
+          <div className="mb-6 bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4">
+            <div className="flex items-center space-x-2 text-yellow-300">
+              <AlertCircle className="h-5 w-5" />
+              <span className="font-medium">Audio narration is currently unavailable</span>
+            </div>
+            <p className="text-sm text-yellow-200 mt-1">
+              You can still access all lesson content and complete exercises. Audio features will be restored once the service is configured.
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Panel - Content */}
           <div className="space-y-6">
@@ -375,8 +426,12 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                 
                 <button
                   onClick={playAudio}
-                  disabled={audioLoading}
-                  className="flex-1 flex items-center justify-center space-x-2 bg-cosmic-purple-600 hover:bg-cosmic-purple-700 rounded-md py-2 px-4 transition-colors"
+                  disabled={audioLoading || !audioAvailable}
+                  className={`flex-1 flex items-center justify-center space-x-2 rounded-md py-2 px-4 transition-colors ${
+                    !audioAvailable 
+                      ? 'bg-gray-600 cursor-not-allowed opacity-50' 
+                      : 'bg-cosmic-purple-600 hover:bg-cosmic-purple-700'
+                  }`}
                 >
                   {audioLoading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -385,12 +440,19 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                   ) : (
                     <Play className="h-4 w-4" />
                   )}
-                  <span>{isPlaying ? 'Pause' : 'Play'} Narration</span>
+                  <span>
+                    {!audioAvailable ? 'Audio Unavailable' : isPlaying ? 'Pause' : 'Play'} Narration
+                  </span>
                 </button>
                 
                 <button
                   onClick={toggleMute}
-                  className="p-2 bg-cosmic-purple-800 rounded-md"
+                  disabled={!audioAvailable}
+                  className={`p-2 rounded-md ${
+                    !audioAvailable 
+                      ? 'bg-gray-600 cursor-not-allowed opacity-50' 
+                      : 'bg-cosmic-purple-800'
+                  }`}
                 >
                   {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                 </button>
@@ -450,7 +512,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                           }`}
                         >
                           <p className="text-sm">{message.content}</p>
-                          {message.audioUrl && (
+                          {message.audioUrl && audioAvailable && (
                             <button
                               onClick={() => playMessageAudio(message.audioUrl!)}
                               className="mt-2 flex items-center space-x-1 text-xs opacity-70 hover:opacity-100"
