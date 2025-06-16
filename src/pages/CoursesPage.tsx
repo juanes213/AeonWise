@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, Clock, BarChart4, BookOpenCheck } from 'lucide-react';
+import { BookOpen, Clock, BarChart4, BookOpenCheck, Play } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import { pythonBasicsCourse } from '../data/courses/python-basics';
 
 interface Course {
   id: string;
@@ -20,15 +22,15 @@ const CoursesPage: React.FC = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
 
-  // Sample courses data
+  // Sample courses data with the Python course
   const courses: Course[] = [
     {
-      id: '1',
-      title: 'Introduction to Python Programming',
-      description: 'Learn the fundamentals of Python programming, from basic syntax to building simple applications. Perfect for beginners with no prior coding experience.',
+      id: 'python-basics',
+      title: pythonBasicsCourse.title,
+      description: pythonBasicsCourse.description,
       level: 'beginner',
-      duration: 6,
-      modules: 8,
+      duration: pythonBasicsCourse.duration,
+      modules: pythonBasicsCourse.lessons.length,
       category: 'Programming',
       imageUrl: 'https://images.pexels.com/photos/1181271/pexels-photo-1181271.jpeg',
       enrolled: true,
@@ -121,13 +123,6 @@ const CoursesPage: React.FC = () => {
     toast({
       title: 'Enrolled Successfully',
       description: 'You have been enrolled in the course',
-    });
-  };
-
-  const continueCourse = (courseId: string) => {
-    toast({
-      title: 'Continuing Course',
-      description: 'Loading your progress...',
     });
   };
 
@@ -267,13 +262,13 @@ const CoursesPage: React.FC = () => {
                   )}
 
                   {course.enrolled ? (
-                    <button
-                      onClick={() => continueCourse(course.id)}
+                    <Link
+                      to={`/courses/${course.id}`}
                       className="btn-primary w-full flex items-center justify-center"
                     >
-                      <BookOpenCheck className="h-4 w-4 mr-2" />
+                      <Play className="h-4 w-4 mr-2" />
                       {course.progress ? 'Continue Learning' : 'Start Learning'}
-                    </button>
+                    </Link>
                   ) : (
                     <button
                       onClick={() => enrollCourse(course.id)}

@@ -13,6 +13,7 @@ import SignUpPage from './pages/auth/SignUpPage';
 import SkillSwapPage from './pages/SkillSwapPage';
 import MentorshipPage from './pages/MentorshipPage';
 import CoursesPage from './pages/CoursesPage';
+import CourseViewPage from './pages/CourseViewPage';
 import ProfilePage from './pages/ProfilePage';
 import RankingPage from './pages/RankingPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -40,6 +41,8 @@ function App() {
                   <Route path="/skill-swap" element={<SkillSwapPage />} />
                   <Route path="/mentorship" element={<MentorshipPage />} />
                   <Route path="/courses" element={<CoursesPage />} />
+                  <Route path="/courses/:courseId" element={<CourseViewPage />} />
+                  <Route path="/courses/:courseId/:lessonId" element={<CourseViewPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/ranking" element={<RankingPage />} />
                   
