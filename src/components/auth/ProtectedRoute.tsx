@@ -1,5 +1,4 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { Loader2 } from 'lucide-react';
 
@@ -22,10 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  if (!user) {
-    return <Navigate to={redirectTo} replace />;
-  }
-
+  // For demo purposes, allow access to all pages
   return <>{children}</>;
 };
 

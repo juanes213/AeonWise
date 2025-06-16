@@ -27,10 +27,10 @@ const Navbar: React.FC = () => {
   }, []);
 
   const navLinks = [
-    { to: '/', label: t('nav.home') },
-    { to: '/skill-swap', label: t('nav.skillSwap') },
-    { to: '/mentorship', label: t('nav.mentorship') },
-    { to: '/courses', label: t('nav.courses') },
+    { to: '/', label: 'Home' },
+    { to: '/skill-swap', label: 'Skill Swap' },
+    { to: '/mentorship', label: 'Mentorship' },
+    { to: '/courses', label: 'Courses' },
     { to: '/ranking', label: 'Ranking', icon: Trophy },
   ];
 
@@ -50,7 +50,7 @@ const Navbar: React.FC = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <span className="font-display text-2xl tracking-wider bg-gradient-to-r from-cosmic-purple-400 to-cosmic-gold-400 bg-clip-text text-transparent">
-              {t('common.appName')}
+              AeonWise
             </span>
           </Link>
 
@@ -94,22 +94,22 @@ const Navbar: React.FC = () => {
                       : 'text-white/80 hover:text-cosmic-gold-400'
                   )}
                 >
-                  {t('nav.profile')}
+                  Profile
                 </Link>
                 <button 
                   onClick={() => signOut()} 
                   className="btn-secondary"
                 >
-                  {t('nav.signOut')}
+                  Sign Out
                 </button>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
                 <Link to="/auth/signin" className="btn-secondary">
-                  {t('nav.signIn')}
+                  Sign In
                 </Link>
                 <Link to="/auth/signup" className="btn-primary">
-                  {t('nav.signUp')}
+                  Sign Up
                 </Link>
               </div>
             )}
@@ -173,7 +173,7 @@ const Navbar: React.FC = () => {
                     )}
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {t('nav.profile')}
+                    Profile
                   </Link>
                   <button 
                     onClick={() => {
@@ -182,7 +182,7 @@ const Navbar: React.FC = () => {
                     }} 
                     className="btn-secondary w-full mt-2"
                   >
-                    {t('nav.signOut')}
+                    Sign Out
                   </button>
                 </>
               ) : (
@@ -192,14 +192,14 @@ const Navbar: React.FC = () => {
                     className="btn-secondary w-full text-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {t('nav.signIn')}
+                    Sign In
                   </Link>
                   <Link 
                     to="/auth/signup" 
                     className="btn-primary w-full text-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {t('nav.signUp')}
+                    Sign Up
                   </Link>
                 </>
               )}

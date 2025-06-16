@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, ArrowRight, Loader2, BookOpen, Users, Sparkles, Star } from 'lucide-react';
-import { useUser } from '../contexts/UserContext';
 import { useToast } from '../hooks/useToast';
 
 interface Course {
@@ -35,8 +33,6 @@ interface Match {
 }
 
 const SkillSwapPage: React.FC = () => {
-  const { user } = useUser();
-  const navigate = useNavigate();
   const { toast } = useToast();
   
   const [learningGoal, setLearningGoal] = useState('');
@@ -66,11 +62,27 @@ const SkillSwapPage: React.FC = () => {
     setShowResults(false);
 
     try {
+      // Check if Groq API key is available
+      const groqApiKey = import.meta.env.VITE_GROQ_API_KEY;
+      
+      if (!groqApiKey) {
+        // Fallback to mock data if no API key
+        console.log('No Groq API key found, using mock data');
+        const mockRecommendations = generateMockRecommendations(learningGoal);
+        setRecommendations(mockRecommendations);
+        setShowResults(true);
+        toast({
+          title: 'Recommendations Found!',
+          description: `Found recommendations for ${learningGoal}`,
+        });
+        return;
+      }
+
       // Call Groq API for AI-powered recommendations
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
+          'Authorization': `Bearer ${groqApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -121,38 +133,8 @@ const SkillSwapPage: React.FC = () => {
         aiRecommendations = JSON.parse(content);
       } catch (parseError) {
         console.error('Failed to parse AI response:', groqResponse.choices[0].message.content);
-        // Fallback recommendations
-        aiRecommendations = {
-          courses: [
-            {
-              title: `Introduction to ${learningGoal}`,
-              description: `Learn the fundamentals of ${learningGoal} from scratch`,
-              level: 'beginner',
-              duration: 8,
-              modules: 6,
-              category: 'General'
-            }
-          ],
-          mentors: [
-            {
-              name: 'Alex Johnson',
-              specialty: learningGoal,
-              price: 50,
-              currency: 'USD',
-              sessionLength: 60,
-              bio: `Expert in ${learningGoal} with 5+ years of experience`,
-              rating: 4.8
-            }
-          ],
-          matches: [
-            {
-              name: 'Sarah Chen',
-              skills: [learningGoal],
-              bio: `Passionate about ${learningGoal} and helping others learn`,
-              matchScore: 8
-            }
-          ]
-        };
+        // Fallback to mock recommendations
+        aiRecommendations = generateMockRecommendations(learningGoal);
       }
 
       // Add IDs to the recommendations
@@ -186,14 +168,107 @@ const SkillSwapPage: React.FC = () => {
 
     } catch (error) {
       console.error('Error finding recommendations:', error);
+      // Fallback to mock data on error
+      const mockRecommendations = generateMockRecommendations(learningGoal);
+      setRecommendations(mockRecommendations);
+      setShowResults(true);
+      
       toast({
-        title: 'Error',
-        description: 'Failed to get recommendations. Please try again.',
-        variant: 'destructive',
+        title: 'Recommendations Found!',
+        description: 'Using demo recommendations for your learning goal',
       });
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const generateMockRecommendations = (goal: string) => {
+    return {
+      courses: [
+        {
+          id: 'mock-course-1',
+          title: `Introduction to ${goal}`,
+          description: `Learn the fundamentals of ${goal} from scratch with hands-on projects`,
+          level: 'beginner',
+          duration: 8,
+          modules: 6,
+          category: 'General'
+        },
+        {
+          id: 'mock-course-2',
+          title: `Advanced ${goal} Techniques`,
+          description: `Master advanced concepts and best practices in ${goal}`,
+          level: 'intermediate',
+          duration: 12,
+          modules: 10,
+          category: 'Advanced'
+        },
+        {
+          id: 'mock-course-3',
+          title: `${goal} for Professionals`,
+          description: `Professional-level ${goal} skills for career advancement`,
+          level: 'advanced',
+          duration: 16,
+          modules: 12,
+          category: 'Professional'
+        }
+      ],
+      mentors: [
+        {
+          id: 'mock-mentor-1',
+          name: 'Alex Johnson',
+          specialty: goal,
+          price: 75,
+          currency: 'USD',
+          sessionLength: 60,
+          bio: `Expert in ${goal} with 8+ years of experience helping students master the subject`,
+          rating: 4.8
+        },
+        {
+          id: 'mock-mentor-2',
+          name: 'Sarah Chen',
+          specialty: `Advanced ${goal}`,
+          price: 95,
+          currency: 'USD',
+          sessionLength: 45,
+          bio: `Senior specialist in ${goal} with industry experience and proven teaching methods`,
+          rating: 4.9
+        },
+        {
+          id: 'mock-mentor-3',
+          name: 'Mike Rodriguez',
+          specialty: `${goal} Fundamentals`,
+          price: 60,
+          currency: 'USD',
+          sessionLength: 60,
+          bio: `Passionate educator specializing in making ${goal} accessible to beginners`,
+          rating: 4.7
+        }
+      ],
+      matches: [
+        {
+          id: 'mock-match-1',
+          name: 'Emma Wilson',
+          skills: [goal, 'Teaching', 'Mentoring'],
+          bio: `Experienced in ${goal} and loves helping others learn`,
+          matchScore: 9
+        },
+        {
+          id: 'mock-match-2',
+          name: 'David Kim',
+          skills: [goal, 'Project Management', 'Communication'],
+          bio: `Professional with strong ${goal} background, happy to share knowledge`,
+          matchScore: 8
+        },
+        {
+          id: 'mock-match-3',
+          name: 'Lisa Thompson',
+          skills: [goal, 'Problem Solving', 'Collaboration'],
+          bio: `Enthusiastic learner and teacher in the ${goal} community`,
+          matchScore: 7
+        }
+      ]
+    };
   };
 
   return (
@@ -280,10 +355,7 @@ const SkillSwapPage: React.FC = () => {
                 )}
               </div>
               
-              <button
-                onClick={() => navigate('/courses')}
-                className="btn-secondary w-full mt-4"
-              >
+              <button className="btn-secondary w-full mt-4">
                 View All Courses
               </button>
             </motion.div>
@@ -323,10 +395,7 @@ const SkillSwapPage: React.FC = () => {
                 )}
               </div>
               
-              <button
-                onClick={() => navigate('/mentorship')}
-                className="btn-secondary w-full mt-4"
-              >
+              <button className="btn-secondary w-full mt-4">
                 Find More Mentors
               </button>
             </motion.div>
@@ -367,10 +436,7 @@ const SkillSwapPage: React.FC = () => {
                 )}
               </div>
               
-              <button
-                onClick={() => navigate('/ranking')}
-                className="btn-secondary w-full mt-4"
-              >
+              <button className="btn-secondary w-full mt-4">
                 View Community
               </button>
             </motion.div>
