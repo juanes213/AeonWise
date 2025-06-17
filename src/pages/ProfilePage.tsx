@@ -4,13 +4,13 @@ import { motion } from 'framer-motion';
 import { 
   User, Edit2, BookOpen, Sparkles, Trophy, Plus, Save, X, 
   Loader2, BadgeCheck, UserCircle, Briefcase, Award, ArrowRight,
-  Calendar, MapPin, ExternalLink, Building
+  Calendar, MapPin, ExternalLink, Building, CheckCircle
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useToast } from '../hooks/useToast';
 import { useSupabase } from '../lib/supabase/SupabaseProvider';
 
-// Avatar configuration with the new uploaded images
+// Avatar configuration with the uploaded images
 const defaultAvatars = [
   '/images/avatar1.jpg', // Professional avatar
   '/images/avatar2.jpg', // Cosmic/futuristic avatar
@@ -68,6 +68,7 @@ const ProfilePage: React.FC = () => {
   const [profileData, setProfileData] = useState({
     bio: '',
     skills: [] as string[],
+    learning_goals: [] as string[],
     workExperience: [] as WorkExperience[],
     projects: [] as Project[],
     certifications: [] as Certification[],
@@ -75,6 +76,7 @@ const ProfilePage: React.FC = () => {
   
   // Form states for adding new items
   const [newSkill, setNewSkill] = useState('');
+  const [newLearningGoal, setNewLearningGoal] = useState('');
   const [newExperience, setNewExperience] = useState<Partial<WorkExperience>>({
     jobTitle: '',
     company: '',
@@ -105,6 +107,7 @@ const ProfilePage: React.FC = () => {
   
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'experience' | 'projects' | 'certifications'>('overview');
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (!user && !isLoading) {
@@ -116,9 +119,10 @@ const ProfilePage: React.FC = () => {
       setProfileData({
         bio: user.bio || '',
         skills: user.skills || [],
-        workExperience: [],
-        projects: [],
-        certifications: [],
+        learning_goals: user.learning_goals || [],
+        workExperience: user.work_experience || [],
+        projects: user.projects || [],
+        certifications: user.certifications || [],
       });
       setSelectedAvatar(user.avatar_url || defaultAvatars[0]);
       
@@ -132,6 +136,7 @@ const ProfilePage: React.FC = () => {
   const calculatePoints = () => {
     let points = 0;
     points += profileData.skills.length * 10;
+    points += profileData.learning_goals.length * 5;
     points += profileData.workExperience.length * 50;
     points += profileData.projects.length * 30;
     points += profileData.certifications.length * 40;
@@ -174,6 +179,23 @@ const ProfilePage: React.FC = () => {
     }));
   };
 
+  const addLearningGoal = () => {
+    if (newLearningGoal.trim() && !profileData.learning_goals.includes(newLearningGoal.trim())) {
+      setProfileData(prev => ({
+        ...prev,
+        learning_goals: [...prev.learning_goals, newLearningGoal.trim()]
+      }));
+      setNewLearningGoal('');
+    }
+  };
+
+  const removeLearningGoal = (index: number) => {
+    setProfileData(prev => ({
+      ...prev,
+      learning_goals: prev.learning_goals.filter((_, i) => i !== index)
+    }));
+  };
+
   const addWorkExperience = () => {
     if (newExperience.jobTitle && newExperience.company) {
       const experience: WorkExperience = {
@@ -206,6 +228,13 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const removeWorkExperience = (index: number) => {
+    setProfileData(prev => ({
+      ...prev,
+      workExperience: prev.workExperience.filter((_, i) => i !== index)
+    }));
+  };
+
   const addProject = () => {
     if (newProject.name && newProject.description) {
       const project: Project = {
@@ -236,6 +265,13 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const removeProject = (index: number) => {
+    setProfileData(prev => ({
+      ...prev,
+      projects: prev.projects.filter((_, i) => i !== index)
+    }));
+  };
+
   const addCertification = () => {
     if (newCertification.name && newCertification.organization) {
       const certification: Certification = {
@@ -264,28 +300,65 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const removeCertification = (index: number) => {
+    setProfileData(prev => ({
+      ...prev,
+      certifications: prev.certifications.filter((_, i) => i !== index)
+    }));
+  };
+
+  const validateProfileData = () => {
+    const errors: string[] = [];
+    
+    if (profileData.skills.length === 0) {
+      errors.push('At least one skill is required');
+    }
+    
+    if (!profileData.bio || profileData.bio.trim().length < 10) {
+      errors.push('Bio must be at least 10 characters long');
+    }
+    
+    return errors;
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
+    
+    // Validate data before saving
+    const validationErrors = validateProfileData();
+    if (validationErrors.length > 0) {
+      toast({
+        title: 'Validation Error',
+        description: validationErrors.join(', '),
+        variant: 'destructive',
+      });
+      return;
+    }
     
     setSaving(true);
     try {
       const points = calculatePoints();
       const rank = calculateRank(points);
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          bio: profileData.bio,
-          skills: profileData.skills,
-          points: points,
-          avatar_url: selectedAvatar,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+      const updateData = {
+        bio: profileData.bio,
+        skills: profileData.skills,
+        learning_goals: profileData.learning_goals,
+        work_experience: profileData.workExperience,
+        projects: profileData.projects,
+        certifications: profileData.certifications,
+        points: points,
+        avatar_url: selectedAvatar,
+      };
+      
+      const { error } = await updateProfile(updateData);
       
       if (error) {
         throw error;
       }
+      
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
       
       toast({
         title: 'Profile Updated!',
@@ -293,15 +366,6 @@ const ProfilePage: React.FC = () => {
       });
       
       setIsEditing(false);
-      
-      if (updateProfile) {
-        updateProfile({
-          bio: profileData.bio,
-          skills: profileData.skills,
-          points: points,
-          avatar_url: selectedAvatar,
-        });
-      }
       
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -362,10 +426,12 @@ const ProfilePage: React.FC = () => {
                 >
                   {saving ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : saveSuccess ? (
+                    <CheckCircle className="h-4 w-4 mr-1" />
                   ) : (
                     <Save className="h-4 w-4 mr-1" />
                   )}
-                  Save
+                  {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save'}
                 </button>
               </div>
             ) : (
@@ -392,8 +458,8 @@ const ProfilePage: React.FC = () => {
                         <button
                           key={index}
                           onClick={() => setSelectedAvatar(avatar)}
-                          className={`w-16 h-16 rounded-full overflow-hidden border-2 ${
-                            selectedAvatar === avatar ? 'border-cosmic-gold-400' : 'border-gray-600'
+                          className={`w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${
+                            selectedAvatar === avatar ? 'border-cosmic-gold-400 scale-105' : 'border-gray-600'
                           }`}
                         >
                           <img src={avatar} alt={`Avatar ${index + 1}`} className="w-full h-full object-cover" />
@@ -405,8 +471,8 @@ const ProfilePage: React.FC = () => {
                         <button
                           key={rank}
                           onClick={() => isAvatarUnlocked(avatar) && setSelectedAvatar(avatar)}
-                          className={`w-16 h-16 rounded-full overflow-hidden border-2 relative ${
-                            selectedAvatar === avatar ? 'border-cosmic-gold-400' : 'border-gray-600'
+                          className={`w-16 h-16 rounded-full overflow-hidden border-2 relative transition-all ${
+                            selectedAvatar === avatar ? 'border-cosmic-gold-400 scale-105' : 'border-gray-600'
                           } ${!isAvatarUnlocked(avatar) ? 'opacity-50' : ''}`}
                           disabled={!isAvatarUnlocked(avatar)}
                         >
@@ -421,7 +487,7 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="w-24 h-24 rounded-full overflow-hidden mb-4">
+                  <div className="w-24 h-24 rounded-full overflow-hidden mb-4 border-2 border-cosmic-gold-400">
                     <img src={selectedAvatar} alt="Profile" className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -512,7 +578,7 @@ const ProfilePage: React.FC = () => {
                       )}
                     </div>
                     
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mb-4">
                       {profileData.skills.length === 0 ? (
                         <p className="text-white/50 text-sm">No skills added yet.</p>
                       ) : (
@@ -536,11 +602,63 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Learning Goals Section */}
+                  <div>
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-lg font-display flex items-center">
+                        <BookOpen className="h-5 w-5 text-cosmic-gold-400 mr-2" />
+                        Learning Goals
+                      </h3>
+                      {isEditing && (
+                        <div className="flex">
+                          <input
+                            type="text"
+                            value={newLearningGoal}
+                            onChange={(e) => setNewLearningGoal(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && addLearningGoal()}
+                            className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-l-md px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500 text-sm"
+                            placeholder="Add learning goal..."
+                          />
+                          <button
+                            onClick={addLearningGoal}
+                            className="bg-cosmic-blue-600 hover:bg-cosmic-blue-700 text-white rounded-r-md px-2 py-1"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {profileData.learning_goals.length === 0 ? (
+                        <p className="text-white/50 text-sm">No learning goals added yet.</p>
+                      ) : (
+                        profileData.learning_goals.map((goal, index) => (
+                          <div
+                            key={index}
+                            className="inline-flex items-center bg-cosmic-blue-900/50 rounded-md px-3 py-1 text-sm"
+                          >
+                            {goal}
+                            {isEditing && (
+                              <button
+                                onClick={() => removeLearningGoal(index)}
+                                className="ml-2 text-white/70 hover:text-white"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
                   {/* Points Summary */}
                   <div className="bg-cosmic-black/20 rounded-lg p-4">
                     <h3 className="text-lg font-display mb-4">Points Breakdown</h3>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>Skills: {profileData.skills.length} × 10 = {profileData.skills.length * 10} pts</div>
+                      <div>Goals: {profileData.learning_goals.length} × 5 = {profileData.learning_goals.length * 5} pts</div>
                       <div>Bio: {profileData.bio ? '1 × 50 = 50' : '0 × 50 = 0'} pts</div>
                       <div>Experience: {profileData.workExperience.length} × 50 = {profileData.workExperience.length * 50} pts</div>
                       <div>Projects: {profileData.projects.length} × 30 = {profileData.projects.length * 30} pts</div>
@@ -642,7 +760,7 @@ const ProfilePage: React.FC = () => {
                   )}
 
                   <div className="space-y-4">
-                    {profileData.workExperience.map((exp) => (
+                    {profileData.workExperience.map((exp, index) => (
                       <div key={exp.id} className="bg-cosmic-black/30 rounded-lg p-4">
                         <div className="flex justify-between items-start mb-2">
                           <div>
@@ -662,6 +780,14 @@ const ProfilePage: React.FC = () => {
                               {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
                             </div>
                           </div>
+                          {isEditing && (
+                            <button
+                              onClick={() => removeWorkExperience(index)}
+                              className="text-white/70 hover:text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                         {exp.description && (
                           <p className="text-white/70 text-sm mt-2">{exp.description}</p>
@@ -731,7 +857,7 @@ const ProfilePage: React.FC = () => {
                   )}
 
                   <div className="space-y-4">
-                    {profileData.projects.map((project) => (
+                    {profileData.projects.map((project, index) => (
                       <div key={project.id} className="bg-cosmic-black/30 rounded-lg p-4">
                         <div className="flex justify-between items-start mb-2">
                           <div>
@@ -753,6 +879,14 @@ const ProfilePage: React.FC = () => {
                               {project.startDate} - {project.endDate}
                             </div>
                           </div>
+                          {isEditing && (
+                            <button
+                              onClick={() => removeProject(index)}
+                              className="text-white/70 hover:text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                         <p className="text-white/70 text-sm">{project.description}</p>
                         {project.technologies && project.technologies.length > 0 && (
@@ -837,7 +971,7 @@ const ProfilePage: React.FC = () => {
                   )}
 
                   <div className="space-y-4">
-                    {profileData.certifications.map((cert) => (
+                    {profileData.certifications.map((cert, index) => (
                       <div key={cert.id} className="bg-cosmic-black/30 rounded-lg p-4">
                         <div className="flex justify-between items-start mb-2">
                           <div>
@@ -864,6 +998,14 @@ const ProfilePage: React.FC = () => {
                               <p className="text-white/60 text-sm">ID: {cert.credentialId}</p>
                             )}
                           </div>
+                          {isEditing && (
+                            <button
+                              onClick={() => removeCertification(index)}
+                              className="text-white/70 hover:text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}

@@ -1,109 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, DollarSign, Star, Sparkles } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Star, Sparkles, Loader2, User, MapPin } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import { useSupabase } from '../lib/supabase/SupabaseProvider';
 
 interface Mentor {
   id: string;
-  name: string;
+  username: string;
   specialty: string;
   price: number;
   currency: string;
-  sessions: number;
-  rating: number;
-  sessionLength: number;
+  session_length: number;
   availability: string;
   bio: string;
-  imageUrl: string;
-  skills: string[];
+  category: string;
+  points: number;
+  rank: string;
+  avatar_url?: string;
 }
-
-const mentors: Mentor[] = [
-  {
-    id: '1',
-    name: 'Dr. Alexandria Chen',
-    specialty: 'Machine Learning & AI',
-    price: 120,
-    currency: 'USD',
-    sessions: 152,
-    rating: 4.9,
-    sessionLength: 60,
-    availability: 'Mon-Fri, 2-6pm EST',
-    bio: 'Data scientist with 15 years of experience in machine learning, neural networks, and AI applications. Specialized in predictive modeling and natural language processing. Former lead at Google AI.',
-    imageUrl: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
-    skills: ['Python', 'TensorFlow', 'PyTorch', 'Deep Learning', 'NLP']
-  },
-  {
-    id: '2',
-    name: 'Marcus Rodriguez',
-    specialty: 'Full-Stack Development',
-    price: 95,
-    currency: 'USD',
-    sessions: 87,
-    rating: 4.7,
-    sessionLength: 45,
-    availability: 'Wed-Sun, 10am-4pm EST',
-    bio: 'Full-stack developer with extensive experience in React, Node.js, and cloud architectures. Helped scale multiple startups from concept to production. Expert in modern web technologies.',
-    imageUrl: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
-    skills: ['React', 'Node.js', 'TypeScript', 'AWS', 'MongoDB']
-  },
-  {
-    id: '3',
-    name: 'Sophia Williams',
-    specialty: 'UX/UI Design & Psychology',
-    price: 110,
-    currency: 'USD',
-    sessions: 203,
-    rating: 5.0,
-    sessionLength: 60,
-    availability: 'Tue-Sat, 12-8pm EST',
-    bio: 'Award-winning UX designer with a background in cognitive psychology. Specializes in creating intuitive, accessible interfaces for complex applications. Design lead at top tech companies.',
-    imageUrl: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
-    skills: ['Figma', 'User Research', 'Prototyping', 'Design Systems', 'Psychology']
-  },
-  {
-    id: '4',
-    name: 'Julian Thompson',
-    specialty: 'Music Theory & Composition',
-    price: 80,
-    currency: 'USD',
-    sessions: 64,
-    rating: 4.8,
-    sessionLength: 45,
-    availability: 'Mon-Wed, 6-10pm EST',
-    bio: 'Classically trained composer with a modern approach to music theory. Teaches composition, arrangement, and production for all genres. Graduate of Berklee College of Music.',
-    imageUrl: 'https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg',
-    skills: ['Music Theory', 'Composition', 'Piano', 'Logic Pro', 'Orchestration']
-  },
-  {
-    id: '5',
-    name: 'Elena Vasquez',
-    specialty: 'Entrepreneurship & Business Strategy',
-    price: 150,
-    currency: 'USD',
-    sessions: 127,
-    rating: 4.9,
-    sessionLength: 90,
-    availability: 'Thu-Sun, 9am-5pm EST',
-    bio: 'Serial entrepreneur who has founded three successful tech startups. Expertise in business model development, fundraising, and strategic growth. Former venture capital partner.',
-    imageUrl: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg',
-    skills: ['Business Strategy', 'Fundraising', 'Leadership', 'Marketing', 'Operations']
-  },
-  {
-    id: '6',
-    name: 'Raj Patel',
-    specialty: 'System Design & Architecture',
-    price: 130,
-    currency: 'USD',
-    sessions: 176,
-    rating: 4.9,
-    sessionLength: 60,
-    availability: 'Mon-Fri, 7-11pm EST',
-    bio: 'Principal engineer at a major tech company with expertise in distributed systems and algorithm optimization. Author of two books on system design. 20+ years in tech.',
-    imageUrl: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg',
-    skills: ['System Design', 'Algorithms', 'Distributed Systems', 'Scalability', 'Architecture']
-  }
-];
 
 const categories = [
   'All Categories',
@@ -117,15 +31,67 @@ const categories = [
 
 const MentorshipPage: React.FC = () => {
   const { toast } = useToast();
+  const supabase = useSupabase();
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadMentors();
+  }, []);
+
+  const loadMentors = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('mentorship_profiles')
+        .select(`
+          *,
+          profiles!inner(username, points, avatar_url)
+        `);
+      
+      if (error) throw error;
+      
+      const formattedMentors = data?.map(mentor => ({
+        id: mentor.id,
+        username: mentor.profiles.username,
+        specialty: mentor.specialty,
+        price: mentor.price,
+        currency: mentor.currency,
+        session_length: mentor.session_length,
+        availability: mentor.availability,
+        bio: mentor.bio,
+        category: mentor.category,
+        points: mentor.profiles.points,
+        rank: mentor.profiles.points >= 1601 ? 'cosmic_sage' :
+              mentor.profiles.points >= 1201 ? 'galactic_guide' :
+              mentor.profiles.points >= 801 ? 'comet_crafter' :
+              mentor.profiles.points >= 501 ? 'astral_apprentice' :
+              mentor.profiles.points >= 251 ? 'nebula_novice' : 'starspark',
+        avatar_url: mentor.profiles.avatar_url
+      })) || [];
+      
+      setMentors(formattedMentors);
+    } catch (error) {
+      console.error('Error loading mentors:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load mentors',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredMentors = selectedCategory === 'All Categories'
     ? mentors
     : mentors.filter(mentor => 
-        mentor.specialty.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-        mentor.skills.some(skill => skill.toLowerCase().includes(selectedCategory.toLowerCase()))
+        mentor.category.toLowerCase().includes(selectedCategory.toLowerCase()) ||
+        mentor.specialty.toLowerCase().includes(selectedCategory.toLowerCase())
       );
 
   const bookSession = (mentor: Mentor) => {
@@ -136,7 +102,7 @@ const MentorshipPage: React.FC = () => {
   const handleBooking = () => {
     toast({
       title: 'Session Booked!',
-      description: `Your session with ${selectedMentor?.name} has been scheduled.`,
+      description: `Your session with ${selectedMentor?.username} has been scheduled.`,
     });
     setShowModal(false);
   };
@@ -159,6 +125,18 @@ const MentorshipPage: React.FC = () => {
       transition: { duration: 0.4 }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="pt-24 pb-20 px-4">
+        <div className="container mx-auto max-w-7xl">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-24 pb-20 px-4">
@@ -208,40 +186,43 @@ const MentorshipPage: React.FC = () => {
                 className="cosmos-card overflow-hidden group"
                 variants={itemVariant}
               >
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={mentor.imageUrl}
-                    alt={mentor.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                <div className="relative h-48 overflow-hidden bg-gradient-to-br from-cosmic-purple-800/30 to-cosmic-blue-800/30 flex items-center justify-center">
+                  {mentor.avatar_url ? (
+                    <img
+                      src={mentor.avatar_url}
+                      alt={mentor.username}
+                      className="w-24 h-24 rounded-full object-cover border-2 border-cosmic-gold-400"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-cosmic-purple-800 flex items-center justify-center border-2 border-cosmic-gold-400">
+                      <User className="h-12 w-12 text-cosmic-gold-400" />
+                    </div>
+                  )}
                   <div className="absolute top-4 right-4 bg-cosmic-black/70 px-2 py-1 rounded-full flex items-center">
                     <Star className="h-3 w-3 text-yellow-400 mr-1" />
-                    <span className="text-xs text-white">{mentor.rating}</span>
+                    <span className="text-xs text-white">4.8</span>
                   </div>
                 </div>
 
                 <div className="p-6">
                   <div className="mb-4">
-                    <h3 className="text-xl font-display">{mentor.name}</h3>
+                    <h3 className="text-xl font-display">{mentor.username}</h3>
                     <p className="text-cosmic-gold-400 text-sm">{mentor.specialty}</p>
+                    <div className="flex items-center text-xs text-gray-400 mt-1">
+                      <span className={`badge ${
+                        mentor.rank === 'cosmic_sage' ? 'bg-cosmic-gold-800 text-cosmic-gold-100' :
+                        mentor.rank === 'galactic_guide' ? 'bg-cosmic-purple-800 text-cosmic-purple-100' :
+                        'bg-cosmic-blue-800 text-cosmic-blue-100'
+                      } mr-2`}>
+                        {mentor.rank.replace('_', ' ')}
+                      </span>
+                      <span>{mentor.points} points</span>
+                    </div>
                   </div>
 
                   <p className="text-white/70 text-sm mb-4 line-clamp-3">
                     {mentor.bio}
                   </p>
-
-                  <div className="mb-4">
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {mentor.skills.slice(0, 3).map((skill, index) => (
-                        <span key={index} className="text-xs bg-cosmic-purple-900/50 text-cosmic-purple-100 px-2 py-1 rounded">
-                          {skill}
-                        </span>
-                      ))}
-                      {mentor.skills.length > 3 && (
-                        <span className="text-xs text-gray-400">+{mentor.skills.length - 3} more</span>
-                      )}
-                    </div>
-                  </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="flex items-center text-sm">
@@ -252,7 +233,7 @@ const MentorshipPage: React.FC = () => {
                     </div>
                     <div className="flex items-center text-sm">
                       <Clock className="h-4 w-4 text-cosmic-gold-400 mr-2" />
-                      <span>{mentor.sessionLength} min</span>
+                      <span>{mentor.session_length} min</span>
                     </div>
                     <div className="flex items-center text-sm col-span-2">
                       <Calendar className="h-4 w-4 text-cosmic-gold-400 mr-2" />
@@ -294,20 +275,26 @@ const MentorshipPage: React.FC = () => {
       {showModal && selectedMentor && (
         <div className="fixed inset-0 bg-cosmic-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="cosmos-card max-w-md w-full p-6">
-            <h3 className="text-xl font-display mb-4">Book a Session with {selectedMentor.name}</h3>
+            <h3 className="text-xl font-display mb-4">Book a Session with {selectedMentor.username}</h3>
             
             <div className="mb-6">
               <div className="flex items-center mb-4">
-                <img
-                  src={selectedMentor.imageUrl}
-                  alt={selectedMentor.name}
-                  className="w-12 h-12 rounded-full object-cover mr-4"
-                />
+                {selectedMentor.avatar_url ? (
+                  <img
+                    src={selectedMentor.avatar_url}
+                    alt={selectedMentor.username}
+                    className="w-12 h-12 rounded-full object-cover mr-4"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-cosmic-purple-800 flex items-center justify-center mr-4">
+                    <User className="h-6 w-6 text-cosmic-gold-400" />
+                  </div>
+                )}
                 <div>
                   <p className="text-cosmic-gold-400">{selectedMentor.specialty}</p>
                   <div className="flex items-center">
                     <Star className="h-3 w-3 text-yellow-400 mr-1" />
-                    <span className="text-xs">{selectedMentor.rating} ({selectedMentor.sessions} sessions)</span>
+                    <span className="text-xs">4.8 (152 sessions)</span>
                   </div>
                 </div>
               </div>
@@ -321,7 +308,7 @@ const MentorshipPage: React.FC = () => {
                 </div>
                 <div className="flex items-center text-sm">
                   <Clock className="h-4 w-4 text-cosmic-gold-400 mr-2" />
-                  <span>{selectedMentor.sessionLength} min</span>
+                  <span>{selectedMentor.session_length} min</span>
                 </div>
               </div>
               

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Crown, Star, Sparkles, Medal, Award, Loader2 } from 'lucide-react';
+import { Trophy, Crown, Star, Sparkles, Medal, Award, Loader2, User } from 'lucide-react';
 import { useSupabase } from '../lib/supabase/SupabaseProvider';
 import { useToast } from '../hooks/useToast';
-import { getRankBadgeClass } from '../lib/utils';
 
 interface RankedUser {
   id: string;
@@ -97,6 +96,23 @@ const RankingPage: React.FC = () => {
     }
   };
 
+  const getRankBadgeClass = (rank: string) => {
+    switch (rank) {
+      case 'cosmic_sage':
+        return 'bg-cosmic-gold-800 text-cosmic-gold-100';
+      case 'galactic_guide':
+        return 'bg-cosmic-purple-800 text-cosmic-purple-100';
+      case 'comet_crafter':
+        return 'bg-cosmic-blue-800 text-cosmic-blue-100';
+      case 'astral_apprentice':
+        return 'bg-cosmic-purple-900 text-cosmic-purple-100';
+      case 'nebula_novice':
+        return 'bg-cosmic-blue-900 text-cosmic-blue-100';
+      default:
+        return 'bg-cosmic-blue-900 text-cosmic-blue-100';
+    }
+  };
+
   const staggerContainer = {
     hidden: { opacity: 0 },
     visible: {
@@ -118,8 +134,12 @@ const RankingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
+      <div className="pt-24 pb-20 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -197,15 +217,15 @@ const RankingPage: React.FC = () => {
               <div className="flex flex-col items-center pt-8">
                 <div className="cosmos-card p-4 text-center bg-gradient-to-r from-gray-300/20 to-gray-500/20 border-gray-300/30">
                   <Medal className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                  <div className="w-16 h-16 rounded-full bg-cosmic-purple-800 flex items-center justify-center mx-auto mb-3">
+                  <div className="w-16 h-16 rounded-full bg-cosmic-purple-800 flex items-center justify-center mx-auto mb-3 overflow-hidden">
                     {users[1].avatar_url ? (
                       <img
                         src={users[1].avatar_url}
                         alt={users[1].username}
-                        className="w-full h-full rounded-full object-cover"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <Sparkles className="h-8 w-8 text-cosmic-gold-400" />
+                      <User className="h-8 w-8 text-cosmic-gold-400" />
                     )}
                   </div>
                   <h3 className="font-display text-lg">{users[1].username}</h3>
@@ -220,15 +240,15 @@ const RankingPage: React.FC = () => {
               <div className="flex flex-col items-center">
                 <div className="cosmos-card p-6 text-center bg-gradient-to-r from-yellow-400/20 to-yellow-600/20 border-yellow-400/30">
                   <Crown className="h-10 w-10 text-yellow-400 mx-auto mb-2" />
-                  <div className="w-20 h-20 rounded-full bg-cosmic-purple-800 flex items-center justify-center mx-auto mb-3">
+                  <div className="w-20 h-20 rounded-full bg-cosmic-purple-800 flex items-center justify-center mx-auto mb-3 overflow-hidden">
                     {users[0].avatar_url ? (
                       <img
                         src={users[0].avatar_url}
                         alt={users[0].username}
-                        className="w-full h-full rounded-full object-cover"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <Sparkles className="h-10 w-10 text-cosmic-gold-400" />
+                      <User className="h-10 w-10 text-cosmic-gold-400" />
                     )}
                   </div>
                   <h3 className="font-display text-xl">{users[0].username}</h3>
@@ -243,15 +263,15 @@ const RankingPage: React.FC = () => {
               <div className="flex flex-col items-center pt-8">
                 <div className="cosmos-card p-4 text-center bg-gradient-to-r from-amber-600/20 to-amber-800/20 border-amber-600/30">
                   <Award className="h-8 w-8 text-amber-600 mx-auto mb-2" />
-                  <div className="w-16 h-16 rounded-full bg-cosmic-purple-800 flex items-center justify-center mx-auto mb-3">
+                  <div className="w-16 h-16 rounded-full bg-cosmic-purple-800 flex items-center justify-center mx-auto mb-3 overflow-hidden">
                     {users[2].avatar_url ? (
                       <img
                         src={users[2].avatar_url}
                         alt={users[2].username}
-                        className="w-full h-full rounded-full object-cover"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <Sparkles className="h-8 w-8 text-cosmic-gold-400" />
+                      <User className="h-8 w-8 text-cosmic-gold-400" />
                     )}
                   </div>
                   <h3 className="font-display text-lg">{users[2].username}</h3>
@@ -284,15 +304,15 @@ const RankingPage: React.FC = () => {
                     {getPositionIcon(user.position)}
                   </div>
                   
-                  <div className="w-12 h-12 rounded-full bg-cosmic-purple-800 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-cosmic-purple-800 flex items-center justify-center overflow-hidden">
                     {user.avatar_url ? (
                       <img
                         src={user.avatar_url}
                         alt={user.username}
-                        className="w-full h-full rounded-full object-cover"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <Sparkles className="h-6 w-6 text-cosmic-gold-400" />
+                      <User className="h-6 w-6 text-cosmic-gold-400" />
                     )}
                   </div>
                   

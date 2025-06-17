@@ -3,6 +3,39 @@ import { useSupabase } from '../lib/supabase/SupabaseProvider';
 
 type UserRank = 'starspark' | 'nebula_novice' | 'astral_apprentice' | 'comet_crafter' | 'galactic_guide' | 'cosmic_sage';
 
+interface WorkExperience {
+  id: string;
+  jobTitle: string;
+  company: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  current: boolean;
+  description: string;
+  achievements: string[];
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  technologies: string[];
+  startDate: string;
+  endDate: string;
+  url?: string;
+  achievements: string[];
+}
+
+interface Certification {
+  id: string;
+  name: string;
+  organization: string;
+  issueDate: string;
+  expiryDate?: string;
+  credentialId?: string;
+  url?: string;
+}
+
 interface UserProfile {
   id: string;
   email: string;
@@ -14,6 +47,9 @@ interface UserProfile {
   bio: string;
   avatar_url?: string;
   created_at: string;
+  work_experience?: WorkExperience[];
+  projects?: Project[];
+  certifications?: Certification[];
 }
 
 interface UserContextType {
@@ -43,6 +79,42 @@ const calculateRank = (points: number): UserRank => {
   if (points >= 501) return 'astral_apprentice';
   if (points >= 251) return 'nebula_novice';
   return 'starspark';
+};
+
+const calculatePoints = (profile: Partial<UserProfile>): number => {
+  let points = 0;
+  
+  // Base points for profile completion
+  if (profile.bio && profile.bio.length > 0) points += 50;
+  if (profile.skills && profile.skills.length > 0) points += profile.skills.length * 10;
+  if (profile.learning_goals && profile.learning_goals.length > 0) points += profile.learning_goals.length * 5;
+  
+  // Work experience points
+  if (profile.work_experience) {
+    points += profile.work_experience.length * 50;
+    profile.work_experience.forEach(exp => {
+      if (exp.achievements && exp.achievements.length > 0) {
+        points += exp.achievements.length * 10;
+      }
+    });
+  }
+  
+  // Project points
+  if (profile.projects) {
+    points += profile.projects.length * 30;
+    profile.projects.forEach(project => {
+      if (project.achievements && project.achievements.length > 0) {
+        points += project.achievements.length * 10;
+      }
+    });
+  }
+  
+  // Certification points
+  if (profile.certifications) {
+    points += profile.certifications.length * 40;
+  }
+  
+  return points;
 };
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -278,12 +350,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Updating profile for user:', user.id, 'with updates:', updates);
       
+      // Calculate new points based on all profile data
+      const updatedProfileData = { ...user, ...updates };
+      const newPoints = calculatePoints(updatedProfileData);
+      const newRank = calculateRank(newPoints);
+      
+      // Prepare update data
+      const updateData = {
+        ...updates,
+        points: newPoints,
+        updated_at: new Date().toISOString()
+      };
+      
       const { error } = await supabase
         .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', user.id);
       
       if (error) {
@@ -294,7 +375,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUser = {
         ...user,
         ...updates,
-        rank: calculateRank(updates.points !== undefined ? updates.points : user.points)
+        points: newPoints,
+        rank: newRank
       };
       
       console.log('Profile updated successfully, new user state:', updatedUser);

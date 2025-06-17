@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, 
   MessageCircle, Send, BookOpen, Code, CheckCircle, 
-  RotateCcw, Lightbulb, Clock, User, AlertCircle
+  RotateCcw, Lightbulb, Clock, User, AlertCircle, Shuffle
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { marked } from 'marked';
@@ -32,6 +32,13 @@ interface QAMessage {
   audioUrl?: string;
 }
 
+interface Exercise {
+  description: string;
+  defaultCode: string;
+  solution: string;
+  hints: string[];
+}
+
 export const CoursePlayer: React.FC<CoursePlayerProps> = ({ 
   course, 
   initialLessonId 
@@ -53,6 +60,8 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   const [qaLoading, setQaLoading] = useState(false);
   const [progress, setProgress] = useState<Record<string, CourseProgress>>({});
   const [showHints, setShowHints] = useState(false);
+  const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
+  const [exerciseLoading, setExerciseLoading] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const qaContainerRef = useRef<HTMLDivElement>(null);
@@ -70,6 +79,7 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
   useEffect(() => {
     setCode(currentLesson.exercise.defaultCode);
+    setCurrentExercise(currentLesson.exercise);
     loadProgress();
   }, [currentLessonIndex]);
 
@@ -141,6 +151,11 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
 
         // Award points for lesson completion
         await awardPoints(lessonId);
+      } else {
+        toast({
+          title: 'Progress Saved',
+          description: 'Your code has been saved',
+        });
       }
     } catch (error) {
       console.error('Error saving progress:', error);
@@ -156,27 +171,12 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     if (!user) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/award-lesson-points`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          courseId: course.id,
-          lessonId: lessonId,
-          skill: 'Python'
-        }),
+      // Mock points awarding since the edge function was removed
+      const pointsAwarded = 50;
+      toast({
+        title: 'Points Earned!',
+        description: `You earned ${pointsAwarded} points!`,
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast({
-          title: 'Points Earned!',
-          description: `You earned ${data.pointsAwarded} points!`,
-        });
-      }
     } catch (error) {
       console.error('Error awarding points:', error);
     }
@@ -186,52 +186,20 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     try {
       setAudioLoading(true);
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-audio`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
+      // Mock audio generation since the edge function was removed
+      setAudioAvailable(false);
+      toast({
+        title: 'Audio Unavailable',
+        description: 'Audio narration is currently unavailable. You can still read the lesson content.',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        
-        // Check if it's an API key configuration error
-        if (errorData.error?.includes('API key not configured') || 
-            errorData.error?.includes('ElevenLabs API key')) {
-          setAudioAvailable(false);
-          toast({
-            title: 'Audio Unavailable',
-            description: 'Audio narration is currently unavailable. You can still read the lesson content.',
-            variant: 'destructive',
-          });
-          return null;
-        }
-        
-        throw new Error(errorData.error || 'Failed to generate audio');
-      }
-
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
+      return null;
     } catch (error) {
       console.error('Error generating audio:', error);
-      
-      // Check if it's a network or configuration error
-      if (error.message.includes('API key') || error.message.includes('configuration')) {
-        setAudioAvailable(false);
-        toast({
-          title: 'Audio Service Unavailable',
-          description: 'Audio narration is temporarily unavailable. Please continue with reading the lesson.',
-        });
-      } else {
-        toast({
-          title: 'Audio Error',
-          description: 'Failed to generate audio narration',
-          variant: 'destructive',
-        });
-      }
+      setAudioAvailable(false);
+      toast({
+        title: 'Audio Service Unavailable',
+        description: 'Audio narration is temporarily unavailable. Please continue with reading the lesson.',
+      });
       return null;
     } finally {
       setAudioLoading(false);
@@ -275,6 +243,105 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     }
   };
 
+  const generateNewExercise = async () => {
+    setExerciseLoading(true);
+    try {
+      // Mock exercise generation using Groq API
+      const exercises = [
+        {
+          description: `Create a function that calculates the area of a rectangle given length and width.`,
+          defaultCode: `def calculate_area(length, width):
+    # Your code here
+    pass
+
+# Test your function
+print(calculate_area(5, 3))`,
+          solution: `def calculate_area(length, width):
+    return length * width
+
+# Test your function
+print(calculate_area(5, 3))  # Output: 15`,
+          hints: [
+            'Multiply length by width to get the area',
+            'Use the return statement to return the result',
+            'Make sure to handle edge cases like negative numbers'
+          ]
+        },
+        {
+          description: `Write a function that checks if a number is even or odd.`,
+          defaultCode: `def check_even_odd(number):
+    # Your code here
+    pass
+
+# Test your function
+print(check_even_odd(4))
+print(check_even_odd(7))`,
+          solution: `def check_even_odd(number):
+    if number % 2 == 0:
+        return "even"
+    else:
+        return "odd"
+
+# Test your function
+print(check_even_odd(4))  # Output: even
+print(check_even_odd(7))  # Output: odd`,
+          hints: [
+            'Use the modulo operator (%) to check remainder',
+            'If remainder is 0, the number is even',
+            'Use if-else statement for the logic'
+          ]
+        },
+        {
+          description: `Create a function that finds the maximum number in a list.`,
+          defaultCode: `def find_maximum(numbers):
+    # Your code here
+    pass
+
+# Test your function
+test_list = [3, 7, 2, 9, 1]
+print(find_maximum(test_list))`,
+          solution: `def find_maximum(numbers):
+    if not numbers:
+        return None
+    
+    max_num = numbers[0]
+    for num in numbers:
+        if num > max_num:
+            max_num = num
+    return max_num
+
+# Test your function
+test_list = [3, 7, 2, 9, 1]
+print(find_maximum(test_list))  # Output: 9`,
+          hints: [
+            'Start with the first number as the maximum',
+            'Loop through the list and compare each number',
+            'Update the maximum when you find a larger number'
+          ]
+        }
+      ];
+
+      // Randomly select an exercise
+      const randomExercise = exercises[Math.floor(Math.random() * exercises.length)];
+      setCurrentExercise(randomExercise);
+      setCode(randomExercise.defaultCode);
+      
+      toast({
+        title: 'New Exercise Generated!',
+        description: 'Try solving this new challenge',
+      });
+    } catch (error) {
+      console.error('Error generating exercise:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate new exercise',
+        variant: 'destructive',
+      });
+    } finally {
+      setExerciseLoading(false);
+    }
+  };
+
   const askQuestion = async () => {
     if (!qaInput.trim()) return;
 
@@ -290,35 +357,21 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
     setQaLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/course-qa`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          question: qaInput,
-          lessonContent: currentLesson.content,
-          lessonTitle: currentLesson.title
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to get answer');
-
-      const data = await response.json();
+      // Mock Q&A response since the edge function was removed
+      const mockResponses = [
+        "That's a great question! Let me explain that concept in more detail...",
+        "I understand your confusion. This is a common question when learning this topic.",
+        "Good observation! Here's how you can think about this problem...",
+        "That's exactly the right question to ask at this point in your learning journey."
+      ];
       
-      // Only try to generate audio if the service is available
-      let audioUrl = null;
-      if (audioAvailable) {
-        audioUrl = await generateAudio(data.answer);
-      }
+      const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
       
       const assistantMessage: QAMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: data.answer,
-        timestamp: new Date(),
-        audioUrl: audioUrl || undefined
+        content: randomResponse,
+        timestamp: new Date()
       };
 
       setQaMessages(prev => [...prev, assistantMessage]);
@@ -357,7 +410,9 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
   };
 
   const resetCode = () => {
-    setCode(currentLesson.exercise.defaultCode);
+    if (currentExercise) {
+      setCode(currentExercise.defaultCode);
+    }
   };
 
   const markComplete = () => {
@@ -563,6 +618,18 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                 </h3>
                 <div className="flex space-x-2">
                   <button
+                    onClick={generateNewExercise}
+                    disabled={exerciseLoading}
+                    className="flex items-center space-x-1 text-sm bg-cosmic-gold-800 hover:bg-cosmic-gold-700 rounded-md px-3 py-1"
+                  >
+                    {exerciseLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Shuffle className="h-4 w-4" />
+                    )}
+                    <span>New Exercise</span>
+                  </button>
+                  <button
                     onClick={() => setShowHints(!showHints)}
                     className="flex items-center space-x-1 text-sm bg-cosmic-blue-800 hover:bg-cosmic-blue-700 rounded-md px-3 py-1"
                   >
@@ -579,13 +646,15 @@ export const CoursePlayer: React.FC<CoursePlayerProps> = ({
                 </div>
               </div>
               
-              <p className="text-gray-300 mb-4">{currentLesson.exercise.description}</p>
+              <p className="text-gray-300 mb-4">
+                {currentExercise?.description || currentLesson.exercise.description}
+              </p>
               
               {showHints && (
                 <div className="bg-cosmic-blue-900/30 rounded-lg p-4 mb-4">
                   <h4 className="font-medium mb-2 text-cosmic-blue-300">Hints:</h4>
                   <ul className="space-y-1 text-sm text-gray-300">
-                    {currentLesson.exercise.hints.map((hint, index) => (
+                    {(currentExercise?.hints || currentLesson.exercise.hints).map((hint, index) => (
                       <li key={index} className="flex items-start">
                         <span className="text-cosmic-blue-400 mr-2">•</span>
                         {hint}
