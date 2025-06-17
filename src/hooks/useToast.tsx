@@ -5,7 +5,7 @@ const TOAST_REMOVE_DELAY = 5000;
 
 type ToastActionElement = React.ReactElement;
 
-export type Toast = {
+type Toast = {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;

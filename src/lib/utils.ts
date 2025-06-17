@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date): string {
+function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('en-US', {
     month: 'long',
     day: 'numeric',
@@ -30,7 +30,7 @@ export function getRankBadgeClass(rank: string): string {
   }
 }
 
-export function generateRandomString(length: number): string {
+function generateRandomString(length: number): string {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   const charactersLength = characters.length;
@@ -40,7 +40,7 @@ export function generateRandomString(length: number): string {
   return result;
 }
 
-export function truncateText(text: string, maxLength: number): string {
+function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
 }
