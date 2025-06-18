@@ -111,7 +111,16 @@ const SkillSwapPage: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get AI recommendations');
+        // Gracefully handle API failure by using mock data
+        console.log('Groq API request failed, using mock data');
+        const mockRecommendations = generateMockRecommendations(learningGoal);
+        setRecommendations(mockRecommendations);
+        setShowResults(true);
+        toast({
+          title: 'Recommendations Found!',
+          description: 'AI recommendations unavailable, showing demo recommendations',
+        });
+        return;
       }
 
       const groqResponse = await response.json();
