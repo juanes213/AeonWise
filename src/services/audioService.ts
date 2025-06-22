@@ -23,9 +23,19 @@ class AudioService {
 
   constructor() {
     this.apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY || '';
+  }
+
+  // Check if the service is properly configured
+  isConfigured(): boolean {
+    return !!this.apiKey;
+  }
+
+  // Get configuration status message
+  getConfigurationMessage(): string {
     if (!this.apiKey) {
-      console.warn('ElevenLabs API key not found. Audio features will be limited.');
+      return 'Audio features require an ElevenLabs API key. Please add VITE_ELEVENLABS_API_KEY to your environment variables.';
     }
+    return 'Audio service is ready';
   }
 
   // Format content for better audio narration
@@ -109,9 +119,8 @@ class AudioService {
 
   // Generate audio using ElevenLabs API
   async generateAudio(text: string, options?: Partial<AudioSettings>): Promise<string | null> {
-    if (!this.apiKey) {
-      console.warn('ElevenLabs API key not available');
-      return null;
+    if (!this.isConfigured()) {
+      throw new Error('ElevenLabs API key not configured. Please add VITE_ELEVENLABS_API_KEY to your environment variables.');
     }
 
     const cacheKey = this.getCacheKey(text, options);
@@ -142,7 +151,8 @@ class AudioService {
       });
 
       if (!response.ok) {
-        throw new Error(`ElevenLabs API error: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`ElevenLabs API error (${response.status}): ${errorText}`);
       }
 
       const audioBlob = await response.blob();
@@ -154,7 +164,7 @@ class AudioService {
       return audioUrl;
     } catch (error) {
       console.error('Error generating audio:', error);
-      return null;
+      throw error;
     }
   }
 
@@ -247,7 +257,7 @@ class AudioService {
 
   // Get available voices
   async getAvailableVoices(): Promise<any[]> {
-    if (!this.apiKey) return [];
+    if (!this.isConfigured()) return [];
 
     try {
       const response = await fetch(`${this.baseUrl}/voices`, {

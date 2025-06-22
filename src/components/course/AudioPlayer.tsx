@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, Pause, Square, SkipBack, SkipForward, Volume2, VolumeX,
-  Settings, Loader2, Headphones, Clock, Mic, Download
+  Settings, Loader2, Headphones, Clock, Mic, Download, AlertCircle, ExternalLink
 } from 'lucide-react';
 import { audioService, AudioSettings } from '../../services/audioService';
 
@@ -26,6 +26,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [availableVoices, setAvailableVoices] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isConfigured, setIsConfigured] = useState(false);
   const [settings, setSettings] = useState<AudioSettings>({
     voice: 'EXAVITQu4vr4xnSDxMaL',
     speed: 1.0,
@@ -37,6 +39,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const timeUpdateInterval = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
+    checkConfiguration();
     loadAvailableVoices();
     return () => {
       if (timeUpdateInterval.current) {
@@ -69,13 +72,34 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     };
   }, [isPlaying]);
 
+  const checkConfiguration = () => {
+    const configured = audioService.isConfigured();
+    setIsConfigured(configured);
+    if (!configured) {
+      setError(audioService.getConfigurationMessage());
+    }
+  };
+
   const loadAvailableVoices = async () => {
-    const voices = await audioService.getAvailableVoices();
-    setAvailableVoices(voices);
+    if (!audioService.isConfigured()) return;
+    
+    try {
+      const voices = await audioService.getAvailableVoices();
+      setAvailableVoices(voices);
+    } catch (error) {
+      console.error('Failed to load voices:', error);
+    }
   };
 
   const generateAndPlayAudio = async () => {
+    if (!isConfigured) {
+      setError('Audio service is not configured. Please add your ElevenLabs API key.');
+      return;
+    }
+
     setIsLoading(true);
+    setError(null);
+    
     try {
       const url = await audioService.generateLessonAudio(lesson);
       if (url) {
@@ -85,15 +109,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       } else {
         throw new Error('Failed to generate audio');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error playing audio:', error);
+      setError(error.message || 'Failed to generate audio');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handlePlayPause = async () => {
-    if (isLoading) return;
+    if (isLoading || !isConfigured) return;
 
     if (!audioUrl) {
       await generateAndPlayAudio();
@@ -158,6 +183,42 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // If not configured, show setup message
+  if (!isConfigured) {
+    return (
+      <div className={`cosmos-card p-4 ${className}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <Headphones className="h-5 w-5 text-cosmic-gold-400" />
+            <div>
+              <h3 className="font-display text-lg">Audio Narration</h3>
+              <p className="text-sm text-gray-400">AI-powered lesson audio</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-cosmic-purple-900/30 border border-cosmic-purple-700/50 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+            <div className="space-y-2">
+              <h4 className="font-medium text-yellow-400">Audio Setup Required</h4>
+              <p className="text-sm text-gray-300">
+                To enable AI-powered audio narration, you need to configure an ElevenLabs API key.
+              </p>
+              <div className="space-y-2 text-xs text-gray-400">
+                <p>1. Visit <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" className="text-cosmic-blue-400 hover:underline inline-flex items-center">
+                  elevenlabs.io <ExternalLink className="h-3 w-3 ml-1" />
+                </a> to get your API key</p>
+                <p>2. Add <code className="bg-cosmic-black/50 px-1 rounded">VITE_ELEVENLABS_API_KEY=your_key_here</code> to your .env file</p>
+                <p>3. Restart your development server</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`cosmos-card p-4 ${className}`}>
       {/* Header */}
@@ -188,6 +249,23 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg p-3">
+          <div className="flex items-start space-x-2">
+            <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm text-red-300">{error}</p>
+              {error.includes('API key') && (
+                <p className="text-xs text-red-400 mt-1">
+                  Visit <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" className="underline">elevenlabs.io</a> to get your API key
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Controls */}
       <div className="space-y-4">
@@ -223,7 +301,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
           <button
             onClick={handlePlayPause}
-            disabled={isLoading}
+            disabled={isLoading || !isConfigured}
             className="p-4 bg-cosmic-purple-600 hover:bg-cosmic-purple-700 rounded-full text-white transition-colors disabled:opacity-50"
           >
             {isLoading ? (
