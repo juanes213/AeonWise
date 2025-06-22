@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Settings, MoreVertical, Award, Clock, 
-  Users, Star, BookmarkPlus, Share2, Download
+  Users, Star, BookmarkPlus, Share2, Download, Headphones
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InteractiveCodeEditor } from './InteractiveCodeEditor';
 import { CourseNavigation } from './CourseNavigation';
-import { LessonContent } from './LessonContent';
+import { EnhancedLessonContent } from './EnhancedLessonContent';
+import { AudioPlayer } from './AudioPlayer';
 import { useUser } from '../../contexts/UserContext';
 import { useSupabase } from '../../lib/supabase/SupabaseProvider';
 import { useToast } from '../../hooks/useToast';
@@ -43,22 +44,27 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
   });
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(true);
+  const [audioPlaying, setAudioPlaying] = useState(false);
 
   const currentLesson = course.lessons[currentLessonIndex];
 
-  // Enhanced lesson data with additional fields
+  // Enhanced lesson data with additional fields for audio
   const enhancedLessons = course.lessons.map((lesson, index) => ({
     ...lesson,
     objectives: [
-      `Understand ${lesson.title.toLowerCase()} concepts`,
-      'Apply knowledge through practical exercises',
-      'Build confidence in Python programming'
+      `Master ${lesson.title.toLowerCase()} fundamentals`,
+      'Apply concepts through hands-on coding exercises',
+      'Understand best practices and common patterns',
+      'Build confidence in Python programming skills'
     ],
     keyPoints: [
-      'Core syntax and structure',
-      'Best practices and conventions',
-      'Common pitfalls to avoid',
-      'Real-world applications'
+      'Essential syntax and structure',
+      'Industry best practices',
+      'Common pitfalls and how to avoid them',
+      'Real-world application examples',
+      'Performance considerations',
+      'Debugging techniques'
     ],
     difficulty: index < 2 ? 'easy' : index < 4 ? 'medium' : 'hard',
     completed: progress[lesson.id]?.completed || false,
@@ -233,11 +239,26 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
                     <Clock className="h-4 w-4" />
                     <span>{course.duration} hours</span>
                   </div>
+                  <div className="flex items-center space-x-1">
+                    <Headphones className="h-4 w-4 text-cosmic-gold-400" />
+                    <span>AI Audio</span>
+                  </div>
                 </div>
               </div>
             </div>
             
             <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowAudioPlayer(!showAudioPlayer)}
+                className={`p-2 rounded-md transition-colors ${
+                  showAudioPlayer || audioPlaying
+                    ? 'text-cosmic-gold-400 bg-cosmic-gold-900/20' 
+                    : 'text-gray-400 hover:text-cosmic-gold-400'
+                }`}
+                title="Toggle Audio Player"
+              >
+                <Headphones className="h-5 w-5" />
+              </button>
               <button
                 onClick={handleBookmark}
                 className={`p-2 rounded-md transition-colors ${
@@ -269,8 +290,24 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="xl:col-span-3 space-y-8">
-            {/* Lesson Content */}
-            <LessonContent
+            {/* Audio Player */}
+            <AnimatePresence>
+              {showAudioPlayer && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <AudioPlayer
+                    lesson={enhancedLessons[currentLessonIndex]}
+                    onAudioStateChange={setAudioPlaying}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Enhanced Lesson Content */}
+            <EnhancedLessonContent
               lesson={enhancedLessons[currentLessonIndex]}
               onBookmark={handleBookmark}
               onShare={handleShare}
@@ -344,19 +381,24 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Playback Speed
+                    Auto-advance Lessons
                   </label>
-                  <select className="w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-3 py-2 text-white">
-                    <option value="0.5">0.5x</option>
-                    <option value="1" selected>1x</option>
-                    <option value="1.25">1.25x</option>
-                    <option value="1.5">1.5x</option>
-                    <option value="2">2x</option>
-                  </select>
+                  <input type="checkbox" className="rounded" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Auto-advance Lessons
+                    Show Audio Player by Default
+                  </label>
+                  <input 
+                    type="checkbox" 
+                    className="rounded" 
+                    checked={showAudioPlayer}
+                    onChange={(e) => setShowAudioPlayer(e.target.checked)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Auto-play Audio on Lesson Start
                   </label>
                   <input type="checkbox" className="rounded" />
                 </div>
