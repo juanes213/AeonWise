@@ -206,7 +206,7 @@ class AudioService {
         this.currentAudio = null;
       }
 
-      const audio = new HTMLAudioElement();
+      const audio = new Audio(); // Fixed: Use new Audio() instead of new HTMLAudioElement()
       audio.src = audioUrl;
       audio.playbackRate = this.settings.speed;
       
@@ -257,7 +257,10 @@ class AudioService {
 
   // Get available voices
   async getAvailableVoices(): Promise<any[]> {
-    if (!this.isConfigured()) return [];
+    if (!this.isConfigured()) {
+      console.warn('ElevenLabs API key not configured');
+      return [];
+    }
 
     try {
       const response = await fetch(`${this.baseUrl}/voices`, {
@@ -267,6 +270,11 @@ class AudioService {
       });
 
       if (!response.ok) {
+        // Handle 401 errors more gracefully
+        if (response.status === 401) {
+          console.error('ElevenLabs API key is invalid or expired. Please check your VITE_ELEVENLABS_API_KEY environment variable.');
+          return [];
+        }
         throw new Error(`Failed to fetch voices: ${response.status}`);
       }
 
