@@ -7,7 +7,6 @@ console.log('Supabase URL:', supabaseUrl);
 console.log('Supabase Anon Key:', supabaseAnonKey ? 'Present' : 'Missing');
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables');
   throw new Error('Missing Supabase environment variables. Please check your .env file.');
 }
 

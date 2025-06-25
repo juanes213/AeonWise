@@ -356,16 +356,20 @@ const ProfilePage: React.FC = () => {
       if (error) {
         throw error;
       }
-      
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+
+      // Refresh user context and redirect to main profile view
+      if (typeof window !== 'undefined' && window.location) {
+        // Optionally, you can use navigate(0) to reload the page, but better to refresh context
+        // await refreshUser();
+        setIsEditing(false);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
       
       toast({
         title: 'Profile Updated!',
         description: `You earned ${points} points and reached ${rank.replace('_', ' ')} rank!`,
       });
-      
-      setIsEditing(false);
       
     } catch (error) {
       console.error('Error updating profile:', error);

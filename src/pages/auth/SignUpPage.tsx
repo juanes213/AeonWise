@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
@@ -7,7 +7,7 @@ import { useToast } from '../../hooks/useToast';
 
 const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signUp } = useUser();
+  const { signUp, user, isLoading } = useUser();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -19,6 +19,12 @@ const SignUpPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate('/profile');
+    }
+  }, [user, isLoading, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -83,8 +89,6 @@ const SignUpPage: React.FC = () => {
         title: 'Account Created!',
         description: 'Welcome to AeonWise! Complete your profile to get started.',
       });
-      
-      navigate('/profile');
     } catch (error: any) {
       console.error('Error creating account:', error);
       toast({

@@ -144,6 +144,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
+      // For demo purposes, don't fail completely
     }
   };
 
@@ -369,11 +370,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .update(updateData)
         .eq('id', user.id)
         .select()
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Supabase update error:', error);
         throw error;
+      }
+      if (!data) {
+        throw new Error('No profile was updated. Check RLS policies and user id.');
       }
 
       console.log('Supabase response:', data);

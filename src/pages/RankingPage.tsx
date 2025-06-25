@@ -21,21 +21,14 @@ const RankingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'top10' | 'masters'>('all');
 
-  useEffect(() => {
-    loadRankings();
-  }, []);
-
   const loadRankings = async () => {
     try {
       setLoading(true);
-      
       const { data, error } = await supabase
         .from('profiles')
         .select('id, username, points, skills, avatar_url')
         .order('points', { ascending: false });
-      
       if (error) throw error;
-      
       const rankedUsers = data?.map((user, index) => ({
         ...user,
         position: index + 1,
@@ -45,7 +38,6 @@ const RankingPage: React.FC = () => {
               user.points >= 501 ? 'astral_apprentice' :
               user.points >= 251 ? 'nebula_novice' : 'starspark'
       })) || [];
-      
       setUsers(rankedUsers);
     } catch (error) {
       console.error('Error loading rankings:', error);
@@ -58,6 +50,19 @@ const RankingPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadRankings();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadRankings();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
 
   const getFilteredUsers = () => {
     switch (filter) {

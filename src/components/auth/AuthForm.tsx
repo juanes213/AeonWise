@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Lock, Mail } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
@@ -10,7 +10,7 @@ interface AuthFormProps {
 
 export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   const navigate = useNavigate();
-  const { signIn } = useUser();
+  const { signIn, user, isLoading } = useUser();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -18,6 +18,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     password: '',
   });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate('/profile');
+    }
+  }, [user, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,8 +44,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         email: '',
         password: '',
       });
-      
-      navigate('/');
     } catch (error: any) {
       console.error('Auth error:', error);
       toast({
