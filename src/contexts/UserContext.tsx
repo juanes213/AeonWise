@@ -362,15 +362,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updated_at: new Date().toISOString()
       };
       
-      const { error } = await supabase
+      console.log('Sending update data to Supabase:', updateData);
+      
+      const { data, error } = await supabase
         .from('profiles')
         .update(updateData)
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select()
+        .single();
       
       if (error) {
         console.error('Supabase update error:', error);
         throw error;
       }
+
+      console.log('Supabase response:', data);
 
       const updatedUser = {
         ...user,
