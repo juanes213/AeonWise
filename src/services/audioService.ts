@@ -15,7 +15,7 @@ class AudioService {
   private cache: AudioCache = {};
   private currentAudio: HTMLAudioElement | null = null;
   private settings: AudioSettings = {
-    voice: 'EXAVITQu4vr4xnSDxMaL', // Bella - clear, educational voice
+    voice: 'UgBBYS2sOqTuMpoF3BR0', // Bella - clear, educational voice
     speed: 1.0,
     stability: 0.75,
     clarity: 0.75

@@ -18,6 +18,7 @@ import ProfilePage from './pages/ProfilePage';
 import RankingPage from './pages/RankingPage';
 import NotFoundPage from './pages/NotFoundPage';
 import StarfieldBackground from './components/effects/StarfieldBackground';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
   console.log('App component rendering...');
@@ -36,16 +37,30 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/auth/signin" element={<SignInPage />} />
                   <Route path="/auth/signup" element={<SignUpPage />} />
-                  
-                  {/* Public pages - no authentication required for demo */}
                   <Route path="/skill-swap" element={<SkillSwapPage />} />
-                  <Route path="/mentorship" element={<MentorshipPage />} />
-                  <Route path="/courses" element={<CoursesPage />} />
-                  <Route path="/courses/:courseId" element={<CourseViewPage />} />
-                  <Route path="/courses/:courseId/:lessonId" element={<CourseViewPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/ranking" element={<RankingPage />} />
-                  
+                  {/* Protected routes */}
+                  <Route path="/mentorship" element={
+                    <ProtectedRoute>
+                      <MentorshipPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/courses" element={
+                    <ProtectedRoute>
+                      <CoursesPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/courses/:courseId" element={
+                    <ProtectedRoute>
+                      <CourseViewPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/courses/:courseId/:lessonId" element={
+                    <ProtectedRoute>
+                      <CourseViewPage />
+                    </ProtectedRoute>
+                  } />
                   {/* 404 route */}
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
