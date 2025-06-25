@@ -20,16 +20,20 @@ const RankingPage: React.FC = () => {
   const [users, setUsers] = useState<RankedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'top10' | 'masters'>('all');
+  const [timeoutError, setTimeoutError] = useState(false);
 
   const loadRankings = async () => {
     try {
       setLoading(true);
+      setTimeoutError(false);
+      console.log('Loading rankings...');
       const { data, error } = await supabase
         .from('profiles')
         .select('id, username, points, skills, avatar_url')
         .order('points', { ascending: false });
+      console.log('Supabase response:', data, error);
       if (error) throw error;
-      const rankedUsers = data?.map((user, index) => ({
+      const rankedUsers = data?.map((user: any, index: number) => ({
         ...user,
         position: index + 1,
         rank: user.points >= 1601 ? 'cosmic_sage' :
@@ -53,6 +57,12 @@ const RankingPage: React.FC = () => {
 
   useEffect(() => {
     loadRankings();
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setTimeoutError(true);
+        setLoading(false);
+      }
+    }, 7000);
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         loadRankings();
@@ -61,6 +71,7 @@ const RankingPage: React.FC = () => {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
+      clearTimeout(timeout);
     };
   }, []);
 
@@ -137,12 +148,15 @@ const RankingPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (timeoutError) {
     return (
       <div className="pt-24 pb-20 px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
+            <div className="text-center text-red-400">
+              Something went wrong loading the rankings.<br />
+              Please check your connection or try again later.
+            </div>
           </div>
         </div>
       </div>

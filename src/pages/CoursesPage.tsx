@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Clock, BarChart4, BookOpenCheck, Play } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { pythonBasicsCourse } from '../data/courses/python-basics';
+import ProtectedRoute from '../components/auth/ProtectedRoute';
 
 interface Course {
   id: string;
@@ -287,4 +288,8 @@ const CoursesPage: React.FC = () => {
   );
 };
 
-export default CoursesPage;
+export default (props: any) => (
+  <ProtectedRoute customMessage="You need an account to access the Courses page." showRedirectButtons>
+    <CoursesPage {...props} />
+  </ProtectedRoute>
+);

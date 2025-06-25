@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, DollarSign, Star, Sparkles, Loader2, User, MapPin } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import ProtectedRoute from '../components/auth/ProtectedRoute';
 
 interface Mentor {
   id: string;
@@ -354,4 +355,8 @@ const MentorshipPage: React.FC = () => {
   );
 };
 
-export default MentorshipPage;
+export default (props: any) => (
+  <ProtectedRoute customMessage="You need an account to access the Mentorship page." showRedirectButtons>
+    <MentorshipPage {...props} />
+  </ProtectedRoute>
+);
