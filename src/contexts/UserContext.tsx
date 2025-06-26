@@ -127,14 +127,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshUser = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+      console.log('refreshUser: session:', session);
       if (session?.user) {
+        console.log('refreshUser: Fetching profile for user:', session.user.id);
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
-          
+        console.log('refreshUser: Profile fetch result:', profile, error);
         if (!error && profile) {
           setUser({
             ...profile,
@@ -154,9 +155,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeUser = async () => {
       try {
         console.log('Initializing user...');
-        
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+        console.log('initializeUser: session:', session, 'error:', error);
         if (error) {
           console.warn('Auth session error:', error);
           if (mounted) {
@@ -165,17 +165,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return;
         }
-        
         if (session?.user && mounted) {
-          console.log('User session found:', session.user.id);
-          
+          console.log('initializeUser: User session found:', session.user.id);
           try {
+            console.log('initializeUser: Fetching profile for user:', session.user.id);
             const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single();
-              
+            console.log('initializeUser: Profile fetch result:', profile, profileError);
             if (!profileError && profile && mounted) {
               console.log('User profile loaded:', profile);
               setUser({
@@ -218,19 +217,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-
-      console.log('User context auth state change:', event);
-
+      console.log('User context auth state change:', event, session);
       if (event === 'SIGNED_IN' && session) {
         setIsLoading(true);
-        
         try {
+          console.log('onAuthStateChange: Fetching profile for user:', session.user.id);
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
-            
+          console.log('onAuthStateChange: Profile fetch result:', profile, error);
           if (!error && profile) {
             console.log('Profile loaded after sign in:', profile);
             setUser({
@@ -245,7 +242,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Error loading profile after sign in:', error);
           setUser(null);
         }
-        
         setIsLoading(false);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
