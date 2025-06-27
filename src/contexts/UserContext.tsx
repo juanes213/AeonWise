@@ -347,6 +347,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Updating profile for user:', user.id, 'with updates:', updates);
       
+      // First check if profile exists
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (fetchError) {
+        console.error('Error checking existing profile:', fetchError);
+        throw fetchError;
+      }
+      
       // Calculate new points based on all profile data
       const updatedProfileData = { ...user, ...updates };
       const newPoints = calculatePoints(updatedProfileData);
@@ -359,24 +371,58 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updated_at: new Date().toISOString()
       };
       
-      console.log('Sending update data to Supabase:', updateData);
+      let result;
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', user.id)
-        .select()
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Supabase update error:', error);
-        throw error;
-      }
-      if (!data) {
-        throw new Error('No profile was updated. Check RLS policies and user id.');
+      if (!existingProfile) {
+        // Profile doesn't exist, create it
+        console.log('Profile does not exist, creating new profile');
+        const createData = {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          points: newPoints,
+          skills: user.skills || [],
+          learning_goals: user.learning_goals || [],
+          bio: user.bio || '',
+          created_at: new Date().toISOString(),
+          ...updates,
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('Creating profile with data:', createData);
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .insert(createData)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Error creating profile:', error);
+          throw error;
+        }
+        
+        result = data;
+      } else {
+        // Profile exists, update it
+        console.log('Profile exists, updating with data:', updateData);
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', user.id)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Supabase update error:', error);
+          throw error;
+        }
+        
+        result = data;
       }
 
-      console.log('Supabase response:', data);
+      console.log('Supabase response:', result);
 
       const updatedUser = {
         ...user,
