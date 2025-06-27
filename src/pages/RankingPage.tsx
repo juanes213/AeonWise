@@ -63,14 +63,7 @@ const RankingPage: React.FC = () => {
         setLoading(false);
       }
     }, 7000);
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        loadRankings();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
       clearTimeout(timeout);
     };
   }, []);

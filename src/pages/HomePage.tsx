@@ -86,7 +86,7 @@ const HomePage: React.FC = () => {
           </motion.h2>
 
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+            className={`grid grid-cols-1 md:grid-cols-2 ${user ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-8`}
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
@@ -108,39 +108,43 @@ const HomePage: React.FC = () => {
               </div>
             </motion.div>
 
-            <motion.div 
-              className="cosmos-card group"
-              variants={fadeIn}
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="p-4 rounded-full bg-cosmic-blue-800/30 mb-6 group-hover:animate-glow transition-all">
-                  <Sparkles className="h-8 w-8 text-cosmic-gold-400" />
+            {user && (
+              <motion.div 
+                className="cosmos-card group"
+                variants={fadeIn}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="p-4 rounded-full bg-cosmic-blue-800/30 mb-6 group-hover:animate-glow transition-all">
+                    <Sparkles className="h-8 w-8 text-cosmic-gold-400" />
+                  </div>
+                  <h3 className="text-xl font-display mb-4">
+                    Expert Mentorship
+                  </h3>
+                  <p className="text-white/70">
+                    Learn directly from experienced mentors in your field
+                  </p>
                 </div>
-                <h3 className="text-xl font-display mb-4">
-                  Expert Mentorship
-                </h3>
-                <p className="text-white/70">
-                  Learn directly from experienced mentors in your field
-                </p>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
-            <motion.div 
-              className="cosmos-card group"
-              variants={fadeIn}
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="p-4 rounded-full bg-cosmic-gold-800/30 mb-6 group-hover:animate-glow transition-all">
-                  <BookOpen className="h-8 w-8 text-cosmic-gold-400" />
+            {user && (
+              <motion.div 
+                className="cosmos-card group"
+                variants={fadeIn}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="p-4 rounded-full bg-cosmic-gold-800/30 mb-6 group-hover:animate-glow transition-all">
+                    <BookOpen className="h-8 w-8 text-cosmic-gold-400" />
+                  </div>
+                  <h3 className="text-xl font-display mb-4">
+                    AI-Generated Courses
+                  </h3>
+                  <p className="text-white/70">
+                    Access personalized learning content created with AI
+                  </p>
                 </div>
-                <h3 className="text-xl font-display mb-4">
-                  AI-Generated Courses
-                </h3>
-                <p className="text-white/70">
-                  Access personalized learning content created with AI
-                </p>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             <motion.div 
               className="cosmos-card group"
