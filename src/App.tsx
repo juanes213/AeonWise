@@ -43,27 +43,11 @@ function App() {
                   <Route path="/ranking" element={<RankingPage />} />
                   <Route path="/community" element={<CommunityPage />} />
                   
-                  {/* Protected routes */}
-                  <Route path="/mentorship" element={
-                    <ProtectedRoute>
-                      <MentorshipPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/courses" element={
-                    <ProtectedRoute>
-                      <CoursesPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/courses/:courseId" element={
-                    <ProtectedRoute>
-                      <CourseViewPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/courses/:courseId/:lessonId" element={
-                    <ProtectedRoute>
-                      <CourseViewPage />
-                    </ProtectedRoute>
-                  } />
+                  {/* Changed from protected to public routes */}
+                  <Route path="/mentorship" element={<MentorshipPage />} />
+                  <Route path="/courses" element={<CoursesPage />} />
+                  <Route path="/courses/:courseId" element={<CourseViewPage />} />
+                  <Route path="/courses/:courseId/:lessonId" element={<CourseViewPage />} />
                   
                   {/* 404 route */}
                   <Route path="*" element={<NotFoundPage />} />

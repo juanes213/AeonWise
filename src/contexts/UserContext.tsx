@@ -264,9 +264,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
+    // Add event listener for window focus to refresh user session
+    const handleFocus = () => {
+      console.log('Window focused, refreshing user session');
+      refreshUser();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      window.removeEventListener('focus', handleFocus);
     };
   }, [supabase]);
 

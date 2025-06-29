@@ -8,9 +8,7 @@
 
 body {
   @apply bg-cosmic-black text-white font-body;
-  background: radial-gradient(circle at center, rgba(91, 33, 182, 0.3) 0%, rgba(10, 14, 23, 0.9) 80%);
-  background-attachment: fixed;
-  background-size: cover;
+  /* Removed background gradient to allow starfield to be visible */
   /* Optimize scrolling performance */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -100,11 +98,11 @@ body {
   }
 
   .badge-journeyman {
-    @apply bg-cosmic-gold-900 text-cosmic-gold-100;
+    @apply bg-cosmic-blue-800 text-cosmic-blue-100;
   }
 
   .badge-expert {
-    @apply bg-cosmic-gold-700 text-cosmic-gold-50;
+    @apply bg-cosmic-gold-800 text-cosmic-gold-100;
   }
 
   .badge-master {

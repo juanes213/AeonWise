@@ -27,32 +27,103 @@ const RankingPage: React.FC = () => {
       setLoading(true);
       setTimeoutError(false);
       console.log('Loading rankings...');
+      
+      // Add timestamp to measure performance
+      const startTime = performance.now();
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('id, username, points, skills, avatar_url')
         .order('points', { ascending: false });
+      
+      const endTime = performance.now();
+      console.log(`Rankings query took ${endTime - startTime}ms`);
+      
       console.log('Supabase response:', data, error);
       if (error) throw error;
-      const rankedUsers = data?.map((user: any, index: number) => ({
-        ...user,
-        position: index + 1,
-        rank: user.points >= 1601 ? 'cosmic_sage' :
-              user.points >= 1201 ? 'galactic_guide' :
-              user.points >= 801 ? 'comet_crafter' :
-              user.points >= 501 ? 'astral_apprentice' :
-              user.points >= 251 ? 'nebula_novice' : 'starspark'
-      })) || [];
-      setUsers(rankedUsers);
+      
+      // Use mock data if no real data is available
+      if (!data || data.length === 0) {
+        console.log('No ranking data found, using mock data');
+        const mockUsers = generateMockUsers();
+        setUsers(mockUsers);
+      } else {
+        const rankedUsers = data.map((user: any, index: number) => ({
+          ...user,
+          position: index + 1,
+          rank: user.points >= 1601 ? 'cosmic_sage' :
+                user.points >= 1201 ? 'galactic_guide' :
+                user.points >= 801 ? 'comet_crafter' :
+                user.points >= 501 ? 'astral_apprentice' :
+                user.points >= 251 ? 'nebula_novice' : 'starspark'
+        }));
+        setUsers(rankedUsers);
+      }
     } catch (error) {
       console.error('Error loading rankings:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load rankings',
+        description: 'Failed to load rankings. Using demo data instead.',
         variant: 'destructive',
       });
+      
+      // Use mock data on error
+      const mockUsers = generateMockUsers();
+      setUsers(mockUsers);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Generate mock users for demo purposes
+  const generateMockUsers = (): RankedUser[] => {
+    return [
+      {
+        id: '1',
+        username: 'CosmicMaster',
+        points: 1850,
+        rank: 'cosmic_sage',
+        skills: ['Python', 'Machine Learning', 'Data Science'],
+        avatar_url: '/images/avatar1.jpg',
+        position: 1
+      },
+      {
+        id: '2',
+        username: 'StarGazer',
+        points: 1420,
+        rank: 'galactic_guide',
+        skills: ['JavaScript', 'React', 'Node.js'],
+        avatar_url: '/images/avatar2.jpg',
+        position: 2
+      },
+      {
+        id: '3',
+        username: 'NebulaExplorer',
+        points: 950,
+        rank: 'comet_crafter',
+        skills: ['UX Design', 'Figma', 'User Research'],
+        avatar_url: '/images/avatar3.jpg',
+        position: 3
+      },
+      {
+        id: '4',
+        username: 'AstralCoder',
+        points: 650,
+        rank: 'astral_apprentice',
+        skills: ['Python', 'Django', 'PostgreSQL'],
+        avatar_url: '/images/avatar4.jpg',
+        position: 4
+      },
+      {
+        id: '5',
+        username: 'CosmicLearner',
+        points: 320,
+        rank: 'nebula_novice',
+        skills: ['JavaScript', 'HTML/CSS', 'UI Design'],
+        avatar_url: '/images/avatar5.jpg',
+        position: 5
+      }
+    ];
   };
 
   useEffect(() => {
@@ -61,8 +132,17 @@ const RankingPage: React.FC = () => {
       if (loading) {
         setTimeoutError(true);
         setLoading(false);
+        
+        // Use mock data if timeout occurs
+        const mockUsers = generateMockUsers();
+        setUsers(mockUsers);
+        
+        toast({
+          title: 'Loading Timeout',
+          description: 'Using demo data for rankings display',
+        });
       }
-    }, 7000);
+    }, 5000); // Reduced timeout to 5 seconds
     return () => {
       clearTimeout(timeout);
     };
@@ -141,15 +221,12 @@ const RankingPage: React.FC = () => {
     }
   };
 
-  if (timeoutError) {
+  if (loading) {
     return (
       <div className="pt-24 pb-20 px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center text-red-400">
-              Something went wrong loading the rankings.<br />
-              Please check your connection or try again later.
-            </div>
+            <Loader2 className="h-8 w-8 text-cosmic-purple-500 animate-spin" />
           </div>
         </div>
       </div>
@@ -334,7 +411,7 @@ const RankingPage: React.FC = () => {
                       <span className={`badge ${getRankBadgeClass(user.rank)} text-xs`}>
                         {user.rank.replace('_', ' ')}
                       </span>
-                      {user.skills.length > 0 && (
+                      {user.skills && user.skills.length > 0 && (
                         <span className="text-xs text-gray-400">
                           {user.skills.slice(0, 2).join(', ')}
                           {user.skills.length > 2 && '...'}
