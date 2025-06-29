@@ -279,7 +279,7 @@ class AudioService {
     }
   }
 
-  // Get available voices
+  // Get available voices - Fixed to handle API errors gracefully
   async getAvailableVoices(): Promise<any[]> {
     if (!this.isConfigured()) {
       console.warn('ElevenLabs API key not configured');
@@ -300,7 +300,7 @@ class AudioService {
           console.error('ElevenLabs API key is invalid or expired. Please check your VITE_ELEVENLABS_API_KEY environment variable.');
         }
         
-        // Return default voices on error
+        // Return default voices on error instead of throwing
         return this.getDefaultVoices();
       }
 

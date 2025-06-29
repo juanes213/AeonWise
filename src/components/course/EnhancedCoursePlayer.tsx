@@ -148,9 +148,12 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
         updated_at: new Date().toISOString()
       };
 
+      // Fixed: Add onConflict to handle unique constraint properly
       const { error } = await supabase
         .from('course_progress')
-        .upsert(progressData);
+        .upsert(progressData, {
+          onConflict: 'user_id,course_id,lesson_id'
+        });
 
       if (error) throw error;
 
