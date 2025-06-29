@@ -7,6 +7,7 @@ import {
   Code, List, Hash, Quote
 } from 'lucide-react';
 import { audioService } from '../../services/audioService';
+import { AIQuestionAnswer } from './AIQuestionAnswer';
 
 // Updated props for new lesson structure
 interface LessonSection {
@@ -35,6 +36,7 @@ interface EnhancedLessonContentProps {
     examples: LessonExample[];
     exercise: LessonExercise;
     estimatedTime: number;
+    content?: string; // Fallback for old lesson structure
   };
   onBookmark?: () => void;
   onShare?: () => void;
@@ -46,6 +48,7 @@ type ExpandedSections = {
   keyPoints: boolean;
   examples: boolean;
   exercise: boolean;
+  aiAssistant: boolean;
 };
 
 type AudioLoading = Record<string, boolean>;
@@ -60,7 +63,8 @@ export const EnhancedLessonContent: FC<EnhancedLessonContentProps> = ({
     sections: true,
     keyPoints: true,
     examples: true,
-    exercise: true
+    exercise: true,
+    aiAssistant: false
   });
   const [readingProgress, setReadingProgress] = useState<number>(0);
   const [playingSection, setPlayingSection] = useState<string | null>(null);
@@ -101,6 +105,39 @@ export const EnhancedLessonContent: FC<EnhancedLessonContentProps> = ({
     } finally {
       setAudioLoading((prev: AudioLoading) => ({ ...prev, [id]: false }));
     }
+  };
+
+  // Generate lesson context for AI assistant
+  const generateLessonContext = () => {
+    let context = `Lesson Title: ${lesson.title}\n\n`;
+    
+    if (lesson.sections && lesson.sections.length > 0) {
+      context += 'Lesson Content:\n';
+      lesson.sections.forEach((section, index) => {
+        context += `${index + 1}. ${section.heading}\n${section.body}\n\n`;
+      });
+    } else if (lesson.content) {
+      context += `Content: ${lesson.content}\n\n`;
+    }
+    
+    if (lesson.keyPoints && lesson.keyPoints.length > 0) {
+      context += 'Key Points:\n';
+      lesson.keyPoints.forEach((point, index) => {
+        context += `- ${point}\n`;
+      });
+      context += '\n';
+    }
+    
+    if (lesson.examples && lesson.examples.length > 0) {
+      context += 'Examples:\n';
+      lesson.examples.forEach((example, index) => {
+        context += `Example ${index + 1}: ${example.explanation}\nCode: ${example.code}\n\n`;
+      });
+    }
+    
+    context += `Exercise: ${lesson.exercise.description}\n`;
+    
+    return context;
   };
 
   return (
@@ -155,6 +192,14 @@ export const EnhancedLessonContent: FC<EnhancedLessonContentProps> = ({
 
       {/* Sections */}
       <div className="p-6">
+        {/* AI Assistant */}
+        <div className="mb-8">
+          <AIQuestionAnswer
+            lessonContext={generateLessonContext()}
+            lessonTitle={lesson.title}
+          />
+        </div>
+
         {/* Lesson Sections */}
         <div className="mb-8">
           <div className="flex items-center justify-between cursor-pointer mb-2" onClick={() => toggleSection('sections')}>
@@ -169,38 +214,46 @@ export const EnhancedLessonContent: FC<EnhancedLessonContentProps> = ({
                 exit={{ opacity: 0, y: 10 }}
                 className="space-y-8"
               >
-                {lesson.sections.map((section, idx) => (
-                  <div key={idx} className="mb-4">
-                    <div className="flex items-center mb-2">
-                      <Hash className="h-4 w-4 text-cosmic-purple-400 mr-2" />
-                      <h4 className="font-semibold text-lg">{section.heading}</h4>
-                      <button
-                        onClick={() => playAudioForSection(`section-${idx}`, section.heading + '. ' + section.body)}
-                        className="ml-2 text-gray-400 hover:text-cosmic-purple-400"
-                        disabled={audioLoading[`section-${idx}`]}
-                      >
-                        {audioLoading[`section-${idx}`] ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-cosmic-purple-400"></div>
-                        ) : playingSection === `section-${idx}` ? (
-                          <Pause className="h-4 w-4" />
-                        ) : (
-                          <Volume2 className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                    <div className="mb-2 text-gray-200">{section.body}</div>
-                    {section.codeExamples && section.codeExamples.length > 0 && (
-                      <div className="space-y-2 mt-2">
-                        {section.codeExamples.map((ex, i) => (
-                          <div key={i} className="bg-cosmic-black/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
-                            <pre className="text-gray-300 mb-1">{ex.code}</pre>
-                            {ex.explanation && <div className="text-xs text-cosmic-gold-400">{ex.explanation}</div>}
-                          </div>
-                        ))}
+                {lesson.sections && lesson.sections.length > 0 ? (
+                  lesson.sections.map((section, idx) => (
+                    <div key={idx} className="mb-4">
+                      <div className="flex items-center mb-2">
+                        <Hash className="h-4 w-4 text-cosmic-purple-400 mr-2" />
+                        <h4 className="font-semibold text-lg">{section.heading}</h4>
+                        <button
+                          onClick={() => playAudioForSection(`section-${idx}`, section.heading + '. ' + section.body)}
+                          className="ml-2 text-gray-400 hover:text-cosmic-purple-400"
+                          disabled={audioLoading[`section-${idx}`]}
+                        >
+                          {audioLoading[`section-${idx}`] ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-cosmic-purple-400"></div>
+                          ) : playingSection === `section-${idx}` ? (
+                            <Pause className="h-4 w-4" />
+                          ) : (
+                            <Volume2 className="h-4 w-4" />
+                          )}
+                        </button>
                       </div>
-                    )}
+                      <div className="mb-2 text-gray-200">{section.body}</div>
+                      {section.codeExamples && section.codeExamples.length > 0 && (
+                        <div className="space-y-2 mt-2">
+                          {section.codeExamples.map((ex, i) => (
+                            <div key={i} className="bg-cosmic-black/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                              <pre className="text-gray-300 mb-1">{ex.code}</pre>
+                              {ex.explanation && <div className="text-xs text-cosmic-gold-400">{ex.explanation}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : lesson.content ? (
+                  <div className="prose prose-invert max-w-none">
+                    <div className="text-gray-200 whitespace-pre-wrap">{lesson.content}</div>
                   </div>
-                ))}
+                ) : (
+                  <p className="text-gray-400">No content available for this lesson.</p>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -232,29 +285,31 @@ export const EnhancedLessonContent: FC<EnhancedLessonContentProps> = ({
         </div>
 
         {/* Examples */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between cursor-pointer mb-2" onClick={() => toggleSection('examples')}>
-            <h3 className="font-display text-lg">Examples</h3>
-            {expandedSections.examples ? <ChevronUp /> : <ChevronDown />}
+        {lesson.examples && lesson.examples.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between cursor-pointer mb-2" onClick={() => toggleSection('examples')}>
+              <h3 className="font-display text-lg">Examples</h3>
+              {expandedSections.examples ? <ChevronUp /> : <ChevronDown />}
+            </div>
+            <AnimatePresence>
+              {expandedSections.examples && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="space-y-4"
+                >
+                  {lesson.examples.map((ex, idx) => (
+                    <div key={idx} className="bg-cosmic-black/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                      <pre className="text-gray-300 mb-1">{ex.code}</pre>
+                      <div className="text-xs text-cosmic-gold-400">{ex.explanation}</div>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          <AnimatePresence>
-            {expandedSections.examples && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="space-y-4"
-              >
-                {lesson.examples.map((ex, idx) => (
-                  <div key={idx} className="bg-cosmic-black/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
-                    <pre className="text-gray-300 mb-1">{ex.code}</pre>
-                    <div className="text-xs text-cosmic-gold-400">{ex.explanation}</div>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        )}
 
         {/* Exercise */}
         <div className="mb-8">
@@ -271,8 +326,7 @@ export const EnhancedLessonContent: FC<EnhancedLessonContentProps> = ({
                 className="space-y-4"
               >
                 <div className="mb-2 text-gray-200">{lesson.exercise.description}</div>
-                {/* You can add your code editor and test case runner here */}
-                <div className="text-xs text-gray-400">(Code editor and test runner go here)</div>
+                <div className="text-xs text-gray-400">(Interactive code editor is available in the exercise section)</div>
                 <div className="mt-2">
                   <div className="font-semibold mb-1">Hints:</div>
                   <ul className="list-disc pl-6 text-cosmic-gold-200">

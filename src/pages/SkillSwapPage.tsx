@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, ArrowRight, Loader2, BookOpen, Users, Sparkles, Star } from 'lucide-react';
+import { Search, ArrowRight, Loader2, BookOpen, Users, Sparkles, Star, AlertCircle } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import { aiService } from '../services/aiService';
 
 interface Course {
   id: string;
@@ -62,235 +63,69 @@ const SkillSwapPage: React.FC = () => {
     setShowResults(false);
 
     try {
-      // Check if Groq API key is available
-      const groqApiKey = import.meta.env.VITE_GROQ_API_KEY;
+      const aiRecommendations = await aiService.generateRecommendations(learningGoal);
       
-      if (!groqApiKey) {
-        // Fallback to mock data if no API key
-        console.log('No Groq API key found, using mock data');
-        const mockRecommendations = generateMockRecommendations(learningGoal);
-        setRecommendations(mockRecommendations);
-        setShowResults(true);
-        toast({
-          title: 'Recommendations Found!',
-          description: `Found recommendations for ${learningGoal}`,
-        });
-        return;
-      }
-
-      // Call Groq API for AI-powered recommendations
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${groqApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama3-8b-8192',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an AI assistant for AeonWise, a skill-sharing platform. Based on the user's learning goal, provide recommendations in JSON format with three arrays:
-              
-              1. "courses" - Array of 3 course objects with: title, description, level (beginner/intermediate/advanced), duration (in hours), modules (number), category
-              2. "mentors" - Array of 3 mentor objects with: name, specialty, price (number), currency ("USD"), sessionLength (in minutes), bio, rating (4.0-5.0)
-              3. "matches" - Array of 3 user match objects with: name, skills (array), bio, matchScore (1-10)
-              
-              Make recommendations realistic and relevant to the learning goal.
-              
-              IMPORTANT: You must respond with ONLY valid JSON. Do not include any explanatory text before or after the JSON.`
-            },
-            {
-              role: 'user',
-              content: `Generate recommendations for someone wanting to learn: ${learningGoal}`
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 1500
-        })
-      });
-
-      if (!response.ok) {
-        // Gracefully handle API failure by using mock data
-        console.log('Groq API request failed, using mock data');
-        const mockRecommendations = generateMockRecommendations(learningGoal);
-        setRecommendations(mockRecommendations);
-        setShowResults(true);
-        toast({
-          title: 'Recommendations Found!',
-          description: 'AI recommendations unavailable, showing demo recommendations',
-        });
-        return;
-      }
-
-      const groqResponse = await response.json();
-      let aiRecommendations;
-      
-      try {
-        // Clean the response content to ensure it's valid JSON
-        let content = groqResponse.choices[0].message.content.trim();
-        
-        // Remove any markdown code blocks if present
-        content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        
-        // Try to find JSON content if there's extra text
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          content = jsonMatch[0];
-        }
-        
-        aiRecommendations = JSON.parse(content);
-      } catch (parseError) {
-        console.error('Failed to parse AI response:', groqResponse.choices[0].message.content);
-        // Fallback to mock recommendations
-        aiRecommendations = generateMockRecommendations(learningGoal);
-      }
-
-      // Add IDs to the recommendations
-      const coursesWithIds = aiRecommendations.courses?.map((course: any, index: number) => ({
-        ...course,
-        id: `ai-course-${index}`
-      })) || [];
-
-      const mentorsWithIds = aiRecommendations.mentors?.map((mentor: any, index: number) => ({
-        ...mentor,
-        id: `ai-mentor-${index}`
-      })) || [];
-
-      const matchesWithIds = aiRecommendations.matches?.map((match: any, index: number) => ({
-        ...match,
-        id: `ai-match-${index}`
-      })) || [];
-
-      setRecommendations({
-        courses: coursesWithIds,
-        mentors: mentorsWithIds,
-        matches: matchesWithIds
-      });
-
+      setRecommendations(aiRecommendations);
       setShowResults(true);
-
+      
       toast({
-        title: 'Recommendations Found!',
-        description: `Found ${coursesWithIds.length} courses, ${mentorsWithIds.length} mentors, and ${matchesWithIds.length} matches`,
+        title: 'Recommendations Generated! 🎯',
+        description: `Found ${aiRecommendations.courses.length} courses, ${aiRecommendations.mentors.length} mentors, and ${aiRecommendations.matches.length} learning partners`,
       });
 
     } catch (error) {
       console.error('Error finding recommendations:', error);
-      // Fallback to mock data on error
-      const mockRecommendations = generateMockRecommendations(learningGoal);
-      setRecommendations(mockRecommendations);
-      setShowResults(true);
-      
       toast({
-        title: 'Recommendations Found!',
-        description: 'Using demo recommendations for your learning goal',
+        title: 'Error',
+        description: 'Failed to generate recommendations. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsSearching(false);
     }
   };
 
-  const generateMockRecommendations = (goal: string) => {
-    return {
-      courses: [
-        {
-          id: 'mock-course-1',
-          title: `Introduction to ${goal}`,
-          description: `Learn the fundamentals of ${goal} from scratch with hands-on projects`,
-          level: 'beginner',
-          duration: 8,
-          modules: 6,
-          category: 'General'
-        },
-        {
-          id: 'mock-course-2',
-          title: `Advanced ${goal} Techniques`,
-          description: `Master advanced concepts and best practices in ${goal}`,
-          level: 'intermediate',
-          duration: 12,
-          modules: 10,
-          category: 'Advanced'
-        },
-        {
-          id: 'mock-course-3',
-          title: `${goal} for Professionals`,
-          description: `Professional-level ${goal} skills for career advancement`,
-          level: 'advanced',
-          duration: 16,
-          modules: 12,
-          category: 'Professional'
-        }
-      ],
-      mentors: [
-        {
-          id: 'mock-mentor-1',
-          name: 'Alex Johnson',
-          specialty: goal,
-          price: 75,
-          currency: 'USD',
-          sessionLength: 60,
-          bio: `Expert in ${goal} with 8+ years of experience helping students master the subject`,
-          rating: 4.8
-        },
-        {
-          id: 'mock-mentor-2',
-          name: 'Sarah Chen',
-          specialty: `Advanced ${goal}`,
-          price: 95,
-          currency: 'USD',
-          sessionLength: 45,
-          bio: `Senior specialist in ${goal} with industry experience and proven teaching methods`,
-          rating: 4.9
-        },
-        {
-          id: 'mock-mentor-3',
-          name: 'Mike Rodriguez',
-          specialty: `${goal} Fundamentals`,
-          price: 60,
-          currency: 'USD',
-          sessionLength: 60,
-          bio: `Passionate educator specializing in making ${goal} accessible to beginners`,
-          rating: 4.7
-        }
-      ],
-      matches: [
-        {
-          id: 'mock-match-1',
-          name: 'Emma Wilson',
-          skills: [goal, 'Teaching', 'Mentoring'],
-          bio: `Experienced in ${goal} and loves helping others learn`,
-          matchScore: 9
-        },
-        {
-          id: 'mock-match-2',
-          name: 'David Kim',
-          skills: [goal, 'Project Management', 'Communication'],
-          bio: `Professional with strong ${goal} background, happy to share knowledge`,
-          matchScore: 8
-        },
-        {
-          id: 'mock-match-3',
-          name: 'Lisa Thompson',
-          skills: [goal, 'Problem Solving', 'Collaboration'],
-          bio: `Enthusiastic learner and teacher in the ${goal} community`,
-          matchScore: 7
-        }
-      ]
-    };
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariant = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.4 }
+    }
   };
 
   return (
     <div className="pt-24 pb-20 px-4">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-12">
-          <h1 className="font-display mb-4">Skill Swap</h1>
-          <p className="text-white/80 max-w-2xl mx-auto">
-            Tell us what you want to learn and we'll find the perfect courses, mentors, and learning partners for you
-          </p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <h1 className="font-display mb-4">AI-Powered Skill Swap</h1>
+            <p className="text-white/80 max-w-2xl mx-auto">
+              Tell us what you want to learn and our AI will find the perfect courses, mentors, and learning partners for you
+            </p>
+          </motion.div>
         </div>
 
-        <div className="cosmos-card p-8 mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="cosmos-card p-8 mb-12"
+        >
           <div className="mb-8">
             <h2 className="text-xl font-display mb-6 flex items-center">
               <Search className="h-5 w-5 text-cosmic-gold-400 mr-2" />
@@ -309,31 +144,48 @@ const SkillSwapPage: React.FC = () => {
               <button
                 onClick={findRecommendations}
                 disabled={isSearching || !learningGoal.trim()}
-                className="btn-primary px-6"
+                className="btn-primary px-6 flex items-center"
               >
                 {isSearching ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                    Searching...
+                    Generating...
                   </>
                 ) : (
                   <>
+                    <Sparkles className="h-4 w-4 mr-2" />
                     Find Matches
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </>
                 )}
               </button>
             </div>
+
+            {/* AI Service Status */}
+            {!aiService.isConfigured() && (
+              <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4 mb-4">
+                <div className="flex items-center space-x-2 text-yellow-300">
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="font-medium">AI features are in demo mode</span>
+                </div>
+                <p className="text-sm text-yellow-200 mt-1">
+                  Add VITE_GROQ_API_KEY to your environment variables to enable real AI-powered recommendations.
+                </p>
+              </div>
+            )}
           </div>
-        </div>
+        </motion.div>
 
         {showResults && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+          >
             {/* Recommended Courses */}
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4 }}
+              variants={itemVariant}
               className="cosmos-card p-6"
             >
               <div className="flex items-center mb-6">
@@ -346,10 +198,15 @@ const SkillSwapPage: React.FC = () => {
                   <p className="text-gray-400 text-sm">No course suggestions available</p>
                 ) : (
                   recommendations.courses.map((course) => (
-                    <div key={course.id} className="bg-cosmic-black/30 rounded-lg p-4">
+                    <motion.div
+                      key={course.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="bg-cosmic-black/30 rounded-lg p-4 hover:bg-cosmic-black/50 transition-colors"
+                    >
                       <h3 className="font-medium mb-2">{course.title}</h3>
                       <p className="text-sm text-gray-400 mb-2 line-clamp-2">{course.description}</p>
-                      <div className="flex items-center text-xs text-gray-500">
+                      <div className="flex items-center justify-between text-xs text-gray-500">
                         <span className={`badge ${
                           course.level === 'beginner' ? 'bg-cosmic-blue-800 text-cosmic-blue-100' :
                           course.level === 'intermediate' ? 'bg-cosmic-purple-800 text-cosmic-purple-100' :
@@ -359,7 +216,7 @@ const SkillSwapPage: React.FC = () => {
                         </span>
                         <span>{course.duration}h • {course.modules} modules</span>
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
@@ -371,9 +228,7 @@ const SkillSwapPage: React.FC = () => {
 
             {/* Expert Mentors */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
+              variants={itemVariant}
               className="cosmos-card p-6"
             >
               <div className="flex items-center mb-6">
@@ -386,7 +241,12 @@ const SkillSwapPage: React.FC = () => {
                   <p className="text-gray-400 text-sm">No mentors found for your learning goal</p>
                 ) : (
                   recommendations.mentors.map((mentor) => (
-                    <div key={mentor.id} className="bg-cosmic-black/30 rounded-lg p-4">
+                    <motion.div
+                      key={mentor.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-cosmic-black/30 rounded-lg p-4 hover:bg-cosmic-black/50 transition-colors"
+                    >
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-medium">{mentor.name}</h3>
                         <div className="flex items-center">
@@ -399,7 +259,7 @@ const SkillSwapPage: React.FC = () => {
                         ${mentor.price} {mentor.currency} / {mentor.sessionLength}min
                       </div>
                       <p className="text-xs text-gray-400 line-clamp-2">{mentor.bio}</p>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
@@ -411,9 +271,7 @@ const SkillSwapPage: React.FC = () => {
 
             {/* Learning Partners */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
+              variants={itemVariant}
               className="cosmos-card p-6"
             >
               <div className="flex items-center mb-6">
@@ -426,7 +284,12 @@ const SkillSwapPage: React.FC = () => {
                   <p className="text-gray-400 text-sm">No learning partners found yet</p>
                 ) : (
                   recommendations.matches.map((match) => (
-                    <div key={match.id} className="bg-cosmic-black/30 rounded-lg p-4">
+                    <motion.div
+                      key={match.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="bg-cosmic-black/30 rounded-lg p-4 hover:bg-cosmic-black/50 transition-colors"
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-medium">{match.name}</h3>
                         <span className="text-xs bg-cosmic-purple-800 text-cosmic-purple-100 px-2 py-1 rounded">
@@ -440,7 +303,7 @@ const SkillSwapPage: React.FC = () => {
                         </p>
                         <p className="text-xs text-gray-400 line-clamp-2">{match.bio}</p>
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
@@ -449,12 +312,17 @@ const SkillSwapPage: React.FC = () => {
                 View Community
               </button>
             </motion.div>
-          </div>
+          </motion.div>
         )}
 
         {/* Quick Start Tips */}
         {!showResults && (
-          <div className="cosmos-card p-6 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="cosmos-card p-6 text-center"
+          >
             <h2 className="text-xl font-display mb-4">Popular Learning Goals</h2>
             <div className="flex flex-wrap justify-center gap-2">
               {[
@@ -465,7 +333,11 @@ const SkillSwapPage: React.FC = () => {
                 'Public Speaking',
                 'Data Science',
                 'Mobile App Development',
-                'Graphic Design'
+                'Graphic Design',
+                'Python Programming',
+                'UI/UX Design',
+                'Blockchain',
+                'Cybersecurity'
               ].map((goal) => (
                 <button
                   key={goal}
@@ -476,7 +348,10 @@ const SkillSwapPage: React.FC = () => {
                 </button>
               ))}
             </div>
-          </div>
+            <p className="text-sm text-gray-400 mt-4">
+              Click any topic above or type your own learning goal
+            </p>
+          </motion.div>
         )}
       </div>
     </div>

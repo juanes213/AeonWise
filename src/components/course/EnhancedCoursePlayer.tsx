@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Settings, MoreVertical, Award, Clock, 
-  Users, Star, BookmarkPlus, Share2, Download, Headphones
+  Users, Star, BookmarkPlus, Share2, Download, Headphones,
+  CheckCircle, Trophy
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InteractiveCodeEditor } from './InteractiveCodeEditor';
@@ -12,6 +13,7 @@ import { AudioPlayer } from './AudioPlayer';
 import { useUser } from '../../contexts/UserContext';
 import { useSupabase } from '../../lib/supabase/SupabaseProvider';
 import { useToast } from '../../hooks/useToast';
+import { usePointsService } from '../../services/pointsService';
 import type { Course } from '../../data/courses/python-basics';
 
 interface EnhancedCoursePlayerProps {
@@ -34,6 +36,7 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
   const { user } = useUser();
   const supabase = useSupabase();
   const { toast } = useToast();
+  const pointsService = usePointsService();
 
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [progress, setProgress] = useState<Record<string, CourseProgress>>({});
@@ -46,6 +49,7 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [showAudioPlayer, setShowAudioPlayer] = useState(true);
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const [completingLesson, setCompletingLesson] = useState(false);
 
   const currentLesson = course.lessons[currentLessonIndex];
 
@@ -58,7 +62,7 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
       'Understand best practices and common patterns',
       'Build confidence in Python programming skills'
     ],
-    keyPoints: [
+    keyPoints: lesson.keyPoints || [
       'Essential syntax and structure',
       'Industry best practices',
       'Common pitfalls and how to avoid them',
@@ -156,6 +160,8 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
       }));
 
       if (completed) {
+        await awardLessonCompletionPoints(lessonId);
+        
         toast({
           title: 'Lesson Completed! 🎉',
           description: `Great job completing "${currentLesson.title}"`,
@@ -168,6 +174,46 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
         description: 'Failed to save progress',
         variant: 'destructive',
       });
+    }
+  };
+
+  const awardLessonCompletionPoints = async (lessonId: string) => {
+    if (!user) return;
+
+    try {
+      setCompletingLesson(true);
+      
+      // Calculate points based on lesson difficulty
+      const lesson = enhancedLessons.find(l => l.id === lessonId);
+      let points = 50; // Base points
+      
+      if (lesson?.difficulty === 'medium') points = 75;
+      if (lesson?.difficulty === 'hard') points = 100;
+
+      const success = await pointsService.awardPoints(user.id, {
+        source: 'lesson_completion',
+        points: points,
+        details: {
+          course_id: course.id,
+          lesson_id: lessonId,
+          lesson_title: lesson?.title,
+          difficulty: lesson?.difficulty
+        }
+      });
+
+      if (success) {
+        toast({
+          title: 'Points Earned! 🌟',
+          description: `You earned ${points} points for completing this lesson!`,
+        });
+
+        // Refresh user context to update points
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error awarding points:', error);
+    } finally {
+      setCompletingLesson(false);
     }
   };
 
@@ -209,6 +255,12 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
       title: 'Link Copied',
       description: 'Lesson link copied to clipboard',
     });
+  };
+
+  const handleExerciseComplete = async (completed: boolean) => {
+    if (completed && !progress[currentLesson.id]?.completed) {
+      await saveProgress(currentLesson.id, true);
+    }
   };
 
   return (
@@ -317,7 +369,7 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
             {/* Interactive Code Editor */}
             <InteractiveCodeEditor
               exercise={enhancedExercise}
-              onComplete={(completed) => saveProgress(currentLesson.id, completed)}
+              onComplete={handleExerciseComplete}
               onCodeChange={(code) => saveProgress(currentLesson.id, false, code)}
               initialCode={progress[currentLesson.id]?.code}
             />
@@ -353,6 +405,18 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
                     <Download className="h-4 w-4" />
                     <span>Download Certificate</span>
                   </button>
+                </motion.div>
+              )}
+
+              {/* Progress Indicator */}
+              {completingLesson && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="cosmos-card p-4 text-center"
+                >
+                  <Trophy className="h-8 w-8 text-cosmic-gold-400 mx-auto mb-2 animate-pulse" />
+                  <p className="text-sm text-cosmic-gold-400">Awarding points...</p>
                 </motion.div>
               )}
             </div>
