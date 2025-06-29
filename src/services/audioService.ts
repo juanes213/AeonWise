@@ -15,7 +15,7 @@ class AudioService {
   private cache: AudioCache = {};
   private currentAudio: HTMLAudioElement | null = null;
   private settings: AudioSettings = {
-    voice: 'UgBBYS2sOqTuMpoF3BR0', // Bella - clear, educational voice
+    voice: 'EXAVITQu4vr4xnSDxMaL', // Bella - clear, educational voice
     speed: 1.0,
     stability: 0.75,
     clarity: 0.75
@@ -27,12 +27,12 @@ class AudioService {
 
   // Check if the service is properly configured
   isConfigured(): boolean {
-    return !!this.apiKey;
+    return !!this.apiKey && this.apiKey.trim().length > 0;
   }
 
   // Get configuration status message
   getConfigurationMessage(): string {
-    if (!this.apiKey) {
+    if (!this.apiKey || this.apiKey.trim().length === 0) {
       return 'Audio features require an ElevenLabs API key. Please add VITE_ELEVENLABS_API_KEY to your environment variables.';
     }
     return 'Audio service is ready';
@@ -93,9 +93,17 @@ class AudioService {
       });
     }
 
-    // Main content
-    sections.push('Now, let us begin with the main lesson content.');
-    sections.push(this.formatContentForAudio(lesson.content));
+    // Main content - handle both old and new lesson structures
+    if (lesson.content) {
+      sections.push('Now, let us begin with the main lesson content.');
+      sections.push(this.formatContentForAudio(lesson.content));
+    } else if (lesson.sections && lesson.sections.length > 0) {
+      sections.push('Now, let us begin with the main lesson content.');
+      lesson.sections.forEach((section: any) => {
+        sections.push(`Section: ${section.heading}.`);
+        sections.push(this.formatContentForAudio(section.body));
+      });
+    }
 
     // Exercise introduction
     if (lesson.exercise) {
@@ -139,7 +147,7 @@ class AudioService {
           'xi-api-key': this.apiKey,
         },
         body: JSON.stringify({
-          text: text,
+          text: text.substring(0, 5000), // Limit text length to avoid API limits
           model_id: 'eleven_monolingual_v1',
           voice_settings: {
             stability: settings.stability,
@@ -152,7 +160,15 @@ class AudioService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`ElevenLabs API error (${response.status}): ${errorText}`);
+        console.error(`ElevenLabs API error (${response.status}):`, errorText);
+        
+        if (response.status === 401) {
+          throw new Error('Invalid ElevenLabs API key. Please check your VITE_ELEVENLABS_API_KEY environment variable.');
+        } else if (response.status === 429) {
+          throw new Error('ElevenLabs API rate limit exceeded. Please try again later.');
+        } else {
+          throw new Error(`ElevenLabs API error (${response.status}): ${errorText}`);
+        }
       }
 
       const audioBlob = await response.blob();
@@ -206,8 +222,8 @@ class AudioService {
         this.currentAudio = null;
       }
 
-      const audio = new Audio(); // Fixed: Use new Audio() instead of new HTMLAudioElement()
-      audio.src = audioUrl;
+      // Fixed: Use proper Audio constructor
+      const audio = new Audio(audioUrl);
       audio.playbackRate = this.settings.speed;
       
       audio.onended = () => {
@@ -215,14 +231,20 @@ class AudioService {
         resolve();
       };
       
-      audio.onerror = () => {
+      audio.onerror = (error) => {
+        console.error('Audio playback error:', error);
         this.currentAudio = null;
         reject(new Error('Audio playback failed'));
       };
 
-      audio.play().then(() => {
-        this.currentAudio = audio;
-      }).catch(reject);
+      audio.onloadeddata = () => {
+        audio.play().then(() => {
+          this.currentAudio = audio;
+        }).catch(reject);
+      };
+
+      // Start loading the audio
+      audio.load();
     });
   }
 
@@ -235,7 +257,9 @@ class AudioService {
 
   resumeAudio(): void {
     if (this.currentAudio) {
-      this.currentAudio.play();
+      this.currentAudio.play().catch(error => {
+        console.error('Error resuming audio:', error);
+      });
     }
   }
 
@@ -259,7 +283,7 @@ class AudioService {
   async getAvailableVoices(): Promise<any[]> {
     if (!this.isConfigured()) {
       console.warn('ElevenLabs API key not configured');
-      return [];
+      return this.getDefaultVoices();
     }
 
     try {
@@ -270,26 +294,49 @@ class AudioService {
       });
 
       if (!response.ok) {
-        // Handle 401 errors more gracefully
+        console.error(`Failed to fetch voices: ${response.status}`);
+        
         if (response.status === 401) {
           console.error('ElevenLabs API key is invalid or expired. Please check your VITE_ELEVENLABS_API_KEY environment variable.');
-          return [];
         }
-        throw new Error(`Failed to fetch voices: ${response.status}`);
+        
+        // Return default voices on error
+        return this.getDefaultVoices();
       }
 
       const data = await response.json();
-      return data.voices || [];
+      return data.voices || this.getDefaultVoices();
     } catch (error) {
       console.error('Error fetching voices:', error);
-      return [];
+      return this.getDefaultVoices();
     }
+  }
+
+  // Provide default voices when API is unavailable
+  private getDefaultVoices(): any[] {
+    return [
+      {
+        voice_id: 'EXAVITQu4vr4xnSDxMaL',
+        name: 'Bella',
+        labels: { accent: 'American' }
+      },
+      {
+        voice_id: 'UgBBYS2sOqTuMpoF3BR0',
+        name: 'Sarah',
+        labels: { accent: 'British' }
+      },
+      {
+        voice_id: 'pNInz6obpgDQGcFmaJgB',
+        name: 'Adam',
+        labels: { accent: 'American' }
+      }
+    ];
   }
 
   // Utility methods
   private getCacheKey(text: string, options?: Partial<AudioSettings>): string {
     const settings = { ...this.settings, ...options };
-    return btoa(text + JSON.stringify(settings));
+    return btoa(encodeURIComponent(text.substring(0, 100) + JSON.stringify(settings)));
   }
 
   isPlaying(): boolean {

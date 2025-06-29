@@ -141,11 +141,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...profile,
             rank: calculateRank(profile.points)
           });
+        } else {
+          console.log('No profile found or error occurred:', error);
+          setUser(null);
         }
+      } else {
+        setUser(null);
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
-      // For demo purposes, don't fail completely
+      setUser(null);
     }
   };
 
@@ -155,8 +160,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeUser = async () => {
       try {
         console.log('Initializing user...');
+        setIsLoading(true);
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         console.log('initializeUser: session:', session, 'error:', error);
+        
         if (error) {
           console.warn('Auth session error:', error);
           if (mounted) {
@@ -165,6 +173,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return;
         }
+        
         if (session?.user && mounted) {
           console.log('initializeUser: User session found:', session.user.id);
           try {
@@ -175,6 +184,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .eq('id', session.user.id)
               .single();
             console.log('initializeUser: Profile fetch result:', profile, profileError);
+            
             if (!profileError && profile && mounted) {
               console.log('User profile loaded:', profile);
               setUser({
@@ -218,6 +228,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       console.log('User context auth state change:', event, session);
+      
       if (event === 'SIGNED_IN' && session) {
         setIsLoading(true);
         try {
@@ -228,6 +239,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('id', session.user.id)
             .single();
           console.log('onAuthStateChange: Profile fetch result:', profile, error);
+          
           if (!error && profile) {
             console.log('Profile loaded after sign in:', profile);
             setUser({
@@ -297,27 +309,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) throw error;
 
-      // If user was created, create their profile
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: email,
-            username: username,
-            points: 0,
-            skills: [],
-            learning_goals: [],
-            bio: '',
-            created_at: new Date().toISOString()
-          });
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          // Don't throw here, user can complete profile later
-        }
-      }
-
+      // Profile creation is handled by the database trigger
+      // The trigger function handle_new_user() will create the profile automatically
+      
       return { error: null };
     } catch (error) {
       console.error('Error signing up:', error);
@@ -347,18 +341,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Updating profile for user:', user.id, 'with updates:', updates);
       
-      // First check if profile exists
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (fetchError) {
-        console.error('Error checking existing profile:', fetchError);
-        throw fetchError;
-      }
-      
       // Calculate new points based on all profile data
       const updatedProfileData = { ...user, ...updates };
       const newPoints = calculatePoints(updatedProfileData);
@@ -371,58 +353,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updated_at: new Date().toISOString()
       };
       
-      let result;
+      console.log('Updating profile with data:', updateData);
       
-      if (!existingProfile) {
-        // Profile doesn't exist, create it
-        console.log('Profile does not exist, creating new profile');
-        const createData = {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          points: newPoints,
-          skills: user.skills || [],
-          learning_goals: user.learning_goals || [],
-          bio: user.bio || '',
-          created_at: new Date().toISOString(),
-          ...updates,
-          updated_at: new Date().toISOString()
-        };
-        
-        console.log('Creating profile with data:', createData);
-        
-        const { data, error } = await supabase
-          .from('profiles')
-          .insert(createData)
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('Error creating profile:', error);
-          throw error;
-        }
-        
-        result = data;
-      } else {
-        // Profile exists, update it
-        console.log('Profile exists, updating with data:', updateData);
-        
-        const { data, error } = await supabase
-          .from('profiles')
-          .update(updateData)
-          .eq('id', user.id)
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('Supabase update error:', error);
-          throw error;
-        }
-        
-        result = data;
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', user.id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
       }
-
-      console.log('Supabase response:', result);
+      
+      console.log('Supabase response:', data);
 
       const updatedUser = {
         ...user,
