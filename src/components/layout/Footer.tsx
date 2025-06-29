@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Twitter, Github } from 'lucide-react';
+import { Mail, Twitter, Github, MessageCircle, Users, Calendar } from 'lucide-react';
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
@@ -47,32 +47,45 @@ const Footer: React.FC = () => {
                   {t('nav.courses')}
                 </Link>
               </li>
+              <li>
+                <Link to="/community" className="text-white/70 hover:text-cosmic-gold-400 transition-colors">
+                  Community
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Community */}
+          <div className="md:col-span-1">
+            <h3 className="text-lg font-display mb-4 text-white">Community</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/community" className="text-white/70 hover:text-cosmic-gold-400 transition-colors flex items-center">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Discussions
+                </Link>
+              </li>
+              <li>
+                <Link to="/community?tab=members" className="text-white/70 hover:text-cosmic-gold-400 transition-colors flex items-center">
+                  <Users className="h-4 w-4 mr-2" />
+                  Members
+                </Link>
+              </li>
+              <li>
+                <Link to="/community?tab=events" className="text-white/70 hover:text-cosmic-gold-400 transition-colors flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Events
+                </Link>
+              </li>
+              <li>
+                <Link to="/ranking" className="text-white/70 hover:text-cosmic-gold-400 transition-colors">
+                  Leaderboard
+                </Link>
+              </li>
             </ul>
           </div>
 
           {/* Legal */}
-          <div className="md:col-span-1">
-            <h3 className="text-lg font-display mb-4 text-white">Legal</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/privacy" className="text-white/70 hover:text-cosmic-gold-400 transition-colors">
-                  {t('footer.privacy')}
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-white/70 hover:text-cosmic-gold-400 transition-colors">
-                  {t('footer.terms')}
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-white/70 hover:text-cosmic-gold-400 transition-colors">
-                  {t('footer.contact')}
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Social */}
           <div className="md:col-span-1">
             <h3 className="text-lg font-display mb-4 text-white">Connect</h3>
             <div className="flex space-x-4">
@@ -90,6 +103,14 @@ const Footer: React.FC = () => {
               <p className="text-sm text-white/60">
                 Join our cosmic community and embark on an AI-powered learning journey.
               </p>
+            </div>
+            <div className="mt-4">
+              <Link to="/privacy" className="text-white/70 hover:text-cosmic-gold-400 transition-colors text-sm block mb-2">
+                {t('footer.privacy')}
+              </Link>
+              <Link to="/terms" className="text-white/70 hover:text-cosmic-gold-400 transition-colors text-sm">
+                {t('footer.terms')}
+              </Link>
             </div>
           </div>
         </div>

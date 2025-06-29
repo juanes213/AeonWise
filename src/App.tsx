@@ -16,6 +16,7 @@ import CoursesPage from './pages/CoursesPage';
 import CourseViewPage from './pages/CourseViewPage';
 import ProfilePage from './pages/ProfilePage';
 import RankingPage from './pages/RankingPage';
+import CommunityPage from './pages/CommunityPage';
 import NotFoundPage from './pages/NotFoundPage';
 import StarfieldBackground from './components/effects/StarfieldBackground';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -40,6 +41,8 @@ function App() {
                   <Route path="/skill-swap" element={<SkillSwapPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/ranking" element={<RankingPage />} />
+                  <Route path="/community" element={<CommunityPage />} />
+                  
                   {/* Protected routes */}
                   <Route path="/mentorship" element={
                     <ProtectedRoute>
@@ -61,6 +64,7 @@ function App() {
                       <CourseViewPage />
                     </ProtectedRoute>
                   } />
+                  
                   {/* 404 route */}
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

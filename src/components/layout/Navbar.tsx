@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Menu, X, Globe, Trophy } from 'lucide-react';
+import { Menu, X, Globe, Trophy, Bell } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { cn } from '../../lib/utils';
+import { NotificationCenter } from '../community/NotificationCenter';
+import { EnhancedSearch } from '../search/EnhancedSearch';
 
 const Navbar: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -35,6 +37,12 @@ const Navbar: React.FC = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleSearchResult = (result: any) => {
+    console.log('Search result selected:', result);
+    // Handle navigation based on result type
+    // This would typically use router navigation
+  };
 
   return (
     <nav 
@@ -73,8 +81,22 @@ const Navbar: React.FC = () => {
             ))}
           </div>
 
-          {/* Auth and Language Controls */}
+          {/* Search Bar (Desktop) */}
+          <div className="hidden lg:block flex-1 max-w-md mx-8">
+            <EnhancedSearch
+              placeholder="Search courses, mentors, skills..."
+              onResultSelect={handleSearchResult}
+            />
+          </div>
+
+          {/* Auth and Controls */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Notifications */}
+            {user && (
+              <NotificationCenter />
+            )}
+
+            {/* Language Toggle */}
             <button
               onClick={toggleLanguage}
               className="p-2 text-white/80 hover:text-cosmic-gold-400 transition-colors"
@@ -88,17 +110,20 @@ const Navbar: React.FC = () => {
                 <Link 
                   to="/profile" 
                   className={cn(
-                    'font-display text-sm uppercase tracking-wider transition-colors',
+                    'font-display text-sm uppercase tracking-wider transition-colors flex items-center space-x-2',
                     isActive('/profile') 
                       ? 'text-cosmic-gold-400' 
                       : 'text-white/80 hover:text-cosmic-gold-400'
                   )}
                 >
-                  Profile
+                  <div className="w-6 h-6 rounded-full bg-cosmic-purple-600 flex items-center justify-center text-xs">
+                    {user.username.charAt(0).toUpperCase()}
+                  </div>
+                  <span>{user.username}</span>
                 </Link>
                 <button 
                   onClick={() => signOut()} 
-                  className="btn-secondary"
+                  className="btn-secondary text-sm"
                 >
                   Sign Out
                 </button>
@@ -124,6 +149,16 @@ const Navbar: React.FC = () => {
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
+
+        {/* Mobile Search */}
+        {isMenuOpen && (
+          <div className="md:hidden mt-4">
+            <EnhancedSearch
+              placeholder="Search courses, mentors, skills..."
+              onResultSelect={handleSearchResult}
+            />
+          </div>
+        )}
       </div>
 
       {/* Mobile Menu */}
@@ -166,14 +201,17 @@ const Navbar: React.FC = () => {
                   <Link 
                     to="/profile" 
                     className={cn(
-                      'font-display text-sm uppercase tracking-wider py-2',
+                      'font-display text-sm uppercase tracking-wider py-2 flex items-center space-x-2',
                       isActive('/profile') 
                         ? 'text-cosmic-gold-400' 
                         : 'text-white/80'
                     )}
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Profile
+                    <div className="w-6 h-6 rounded-full bg-cosmic-purple-600 flex items-center justify-center text-xs">
+                      {user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <span>{user.username}</span>
                   </Link>
                   <button 
                     onClick={() => {

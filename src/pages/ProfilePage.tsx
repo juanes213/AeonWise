@@ -4,11 +4,14 @@ import { motion } from 'framer-motion';
 import { 
   User, Edit2, BookOpen, Sparkles, Trophy, Plus, Save, X, 
   Loader2, BadgeCheck, UserCircle, Briefcase, Award, ArrowRight,
-  Calendar, MapPin, ExternalLink, Building, CheckCircle
+  Calendar, MapPin, ExternalLink, Building, CheckCircle, TrendingUp,
+  Target, Star, Clock
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useToast } from '../hooks/useToast';
 import { useSupabase } from '../lib/supabase/SupabaseProvider';
+import { EnhancedProfileEditor } from '../components/profile/EnhancedProfileEditor';
+import { usePointsService } from '../services/pointsService';
 
 // Avatar configuration with the uploaded images
 const defaultAvatars = [
@@ -62,6 +65,7 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const supabase = useSupabase();
+  const pointsService = usePointsService();
   
   const [isEditing, setIsEditing] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState('');
@@ -77,37 +81,11 @@ const ProfilePage: React.FC = () => {
   // Form states for adding new items
   const [newSkill, setNewSkill] = useState('');
   const [newLearningGoal, setNewLearningGoal] = useState('');
-  const [newExperience, setNewExperience] = useState<Partial<WorkExperience>>({
-    jobTitle: '',
-    company: '',
-    location: '',
-    startDate: '',
-    endDate: '',
-    current: false,
-    description: '',
-    achievements: []
-  });
-  const [newProject, setNewProject] = useState<Partial<Project>>({
-    name: '',
-    description: '',
-    technologies: [],
-    startDate: '',
-    endDate: '',
-    url: '',
-    achievements: []
-  });
-  const [newCertification, setNewCertification] = useState<Partial<Certification>>({
-    name: '',
-    organization: '',
-    issueDate: '',
-    expiryDate: '',
-    credentialId: '',
-    url: ''
-  });
   
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'experience' | 'projects' | 'certifications'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'experience' | 'projects' | 'certifications' | 'achievements'>('overview');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [pointsHistory, setPointsHistory] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user && !isLoading) {
@@ -126,12 +104,26 @@ const ProfilePage: React.FC = () => {
       });
       setSelectedAvatar(user.avatar_url || defaultAvatars[0]);
       
+      // Load points history
+      loadPointsHistory();
+      
       // If user has no profile data, start in editing mode
       if (!user.bio && (!user.skills || user.skills.length === 0)) {
         setIsEditing(true);
       }
     }
   }, [user, isLoading, navigate]);
+
+  const loadPointsHistory = async () => {
+    if (!user) return;
+    
+    try {
+      const history = await pointsService.getPointsHistory(user.id);
+      setPointsHistory(history);
+    } catch (error) {
+      console.error('Error loading points history:', error);
+    }
+  };
 
   const calculatePoints = () => {
     let points = 0;
@@ -196,117 +188,6 @@ const ProfilePage: React.FC = () => {
     }));
   };
 
-  const addWorkExperience = () => {
-    if (newExperience.jobTitle && newExperience.company) {
-      const experience: WorkExperience = {
-        id: Date.now().toString(),
-        jobTitle: newExperience.jobTitle || '',
-        company: newExperience.company || '',
-        location: newExperience.location || '',
-        startDate: newExperience.startDate || '',
-        endDate: newExperience.current ? '' : (newExperience.endDate || ''),
-        current: newExperience.current || false,
-        description: newExperience.description || '',
-        achievements: newExperience.achievements || []
-      };
-      
-      setProfileData(prev => ({
-        ...prev,
-        workExperience: [...prev.workExperience, experience]
-      }));
-      
-      setNewExperience({
-        jobTitle: '',
-        company: '',
-        location: '',
-        startDate: '',
-        endDate: '',
-        current: false,
-        description: '',
-        achievements: []
-      });
-    }
-  };
-
-  const removeWorkExperience = (index: number) => {
-    setProfileData(prev => ({
-      ...prev,
-      workExperience: prev.workExperience.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addProject = () => {
-    if (newProject.name && newProject.description) {
-      const project: Project = {
-        id: Date.now().toString(),
-        name: newProject.name || '',
-        description: newProject.description || '',
-        technologies: newProject.technologies || [],
-        startDate: newProject.startDate || '',
-        endDate: newProject.endDate || '',
-        url: newProject.url || '',
-        achievements: newProject.achievements || []
-      };
-      
-      setProfileData(prev => ({
-        ...prev,
-        projects: [...prev.projects, project]
-      }));
-      
-      setNewProject({
-        name: '',
-        description: '',
-        technologies: [],
-        startDate: '',
-        endDate: '',
-        url: '',
-        achievements: []
-      });
-    }
-  };
-
-  const removeProject = (index: number) => {
-    setProfileData(prev => ({
-      ...prev,
-      projects: prev.projects.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addCertification = () => {
-    if (newCertification.name && newCertification.organization) {
-      const certification: Certification = {
-        id: Date.now().toString(),
-        name: newCertification.name || '',
-        organization: newCertification.organization || '',
-        issueDate: newCertification.issueDate || '',
-        expiryDate: newCertification.expiryDate || '',
-        credentialId: newCertification.credentialId || '',
-        url: newCertification.url || ''
-      };
-      
-      setProfileData(prev => ({
-        ...prev,
-        certifications: [...prev.certifications, certification]
-      }));
-      
-      setNewCertification({
-        name: '',
-        organization: '',
-        issueDate: '',
-        expiryDate: '',
-        credentialId: '',
-        url: ''
-      });
-    }
-  };
-
-  const removeCertification = (index: number) => {
-    setProfileData(prev => ({
-      ...prev,
-      certifications: prev.certifications.filter((_, i) => i !== index)
-    }));
-  };
-
   const validateProfileData = () => {
     const errors: string[] = [];
     
@@ -357,17 +238,12 @@ const ProfilePage: React.FC = () => {
         throw error;
       }
 
-      // Refresh user context and redirect to main profile view
-      if (typeof window !== 'undefined' && window.location) {
-        // Optionally, you can use navigate(0) to reload the page, but better to refresh context
-        // await refreshUser();
-        setIsEditing(false);
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
-      }
+      setIsEditing(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
       
       toast({
-        title: 'Profile Updated!',
+        title: 'Profile Updated! 🎉',
         description: `You earned ${points} points and reached ${rank.replace('_', ' ')} rank!`,
       });
       
@@ -391,6 +267,18 @@ const ProfilePage: React.FC = () => {
     return true; // Default avatars are always unlocked
   };
 
+  const getNextRankInfo = () => {
+    const currentPoints = user?.points || 0;
+    return pointsService.getPointsForNextRank(currentPoints);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short'
+    });
+  };
+
   if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -401,6 +289,7 @@ const ProfilePage: React.FC = () => {
 
   const currentPoints = calculatePoints();
   const currentRank = calculateRank(currentPoints);
+  const nextRankInfo = getNextRankInfo();
 
   return (
     <div className="pt-24 pb-20 px-4 smooth-scroll">
@@ -502,11 +391,32 @@ const ProfilePage: React.FC = () => {
                     {currentRank.replace('_', ' ')}
                   </span>
                 </div>
-                <div className="bg-cosmic-black/30 px-4 py-2 rounded-full mb-2 flex items-center">
-                  <Trophy className="h-4 w-4 text-cosmic-gold-400 mr-2" />
-                  <span className="text-sm">
-                    {currentPoints} Points
-                  </span>
+                
+                {/* Points and Progress */}
+                <div className="w-full space-y-3">
+                  <div className="bg-cosmic-black/30 px-4 py-2 rounded-full flex items-center justify-center">
+                    <Trophy className="h-4 w-4 text-cosmic-gold-400 mr-2" />
+                    <span className="text-sm font-medium">
+                      {user.points || 0} Points
+                    </span>
+                  </div>
+                  
+                  {nextRankInfo.pointsNeeded > 0 && (
+                    <div className="w-full">
+                      <div className="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>Next: {nextRankInfo.nextRank.replace('_', ' ')}</span>
+                        <span>{nextRankInfo.pointsNeeded} more</span>
+                      </div>
+                      <div className="w-full bg-cosmic-black/50 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-cosmic-purple-500 to-cosmic-gold-500 h-2 rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.min(100, ((user.points || 0) / ((user.points || 0) + nextRankInfo.pointsNeeded)) * 100)}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -517,6 +427,7 @@ const ProfilePage: React.FC = () => {
                   { id: 'experience', label: 'Experience', icon: Briefcase },
                   { id: 'projects', label: 'Projects', icon: BookOpen },
                   { id: 'certifications', label: 'Certifications', icon: Award },
+                  { id: 'achievements', label: 'Achievements', icon: Trophy },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -688,331 +599,380 @@ const ProfilePage: React.FC = () => {
 
               {activeTab === 'experience' && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-display flex items-center">
-                      <Briefcase className="h-5 w-5 text-cosmic-gold-400 mr-2" />
-                      Work Experience
-                    </h3>
-                  </div>
+                  {isEditing ? (
+                    <EnhancedProfileEditor
+                      workExperience={profileData.workExperience}
+                      projects={profileData.projects}
+                      certifications={profileData.certifications}
+                      onUpdateWorkExperience={(experiences) => setProfileData(prev => ({ ...prev, workExperience: experiences }))}
+                      onUpdateProjects={(projects) => setProfileData(prev => ({ ...prev, projects: projects }))}
+                      onUpdateCertifications={(certifications) => setProfileData(prev => ({ ...prev, certifications: certifications }))}
+                    />
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-display flex items-center">
+                          <Briefcase className="h-5 w-5 text-cosmic-gold-400 mr-2" />
+                          Work Experience
+                        </h3>
+                      </div>
 
-                  {isEditing && (
-                    <div className="bg-cosmic-black/20 rounded-lg p-4 space-y-4">
-                      <h4 className="font-medium">Add Work Experience</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                          type="text"
-                          placeholder="Job Title"
-                          value={newExperience.jobTitle || ''}
-                          onChange={(e) => setNewExperience(prev => ({ ...prev, jobTitle: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Company"
-                          value={newExperience.company || ''}
-                          onChange={(e) => setNewExperience(prev => ({ ...prev, company: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Location"
-                          value={newExperience.location || ''}
-                          onChange={(e) => setNewExperience(prev => ({ ...prev, location: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="current"
-                            checked={newExperience.current || false}
-                            onChange={(e) => setNewExperience(prev => ({ ...prev, current: e.target.checked }))}
-                            className="rounded"
-                          />
-                          <label htmlFor="current" className="text-sm">Current Position</label>
-                        </div>
-                        <input
-                          type="month"
-                          placeholder="Start Date"
-                          value={newExperience.startDate || ''}
-                          onChange={(e) => setNewExperience(prev => ({ ...prev, startDate: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        {!newExperience.current && (
-                          <input
-                            type="month"
-                            placeholder="End Date"
-                            value={newExperience.endDate || ''}
-                            onChange={(e) => setNewExperience(prev => ({ ...prev, endDate: e.target.value }))}
-                            className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                          />
+                      <div className="space-y-4">
+                        {profileData.workExperience.length === 0 ? (
+                          <div className="text-center py-8 text-gray-400">
+                            <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>No work experience added yet</p>
+                            <p className="text-sm">Click 'Edit Profile' to add your professional experience</p>
+                          </div>
+                        ) : (
+                          profileData.workExperience.map((exp) => (
+                            <div key={exp.id} className="bg-cosmic-black/30 rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <h4 className="font-medium text-cosmic-gold-400">{exp.jobTitle}</h4>
+                                  <div className="flex items-center text-white/80 mb-1">
+                                    <Building className="h-4 w-4 mr-1" />
+                                    {exp.company}
+                                  </div>
+                                  {exp.location && (
+                                    <div className="flex items-center text-white/60 text-sm mb-1">
+                                      <MapPin className="h-4 w-4 mr-1" />
+                                      {exp.location}
+                                    </div>
+                                  )}
+                                  <div className="flex items-center text-white/60 text-sm">
+                                    <Calendar className="h-4 w-4 mr-1" />
+                                    {formatDate(exp.startDate)} - {exp.current ? 'Present' : formatDate(exp.endDate)}
+                                  </div>
+                                </div>
+                              </div>
+                              {exp.description && (
+                                <p className="text-white/70 text-sm mt-2">{exp.description}</p>
+                              )}
+                              {exp.achievements && exp.achievements.length > 0 && (
+                                <div className="mt-3">
+                                  <h5 className="text-sm font-medium text-cosmic-gold-300 mb-2">Key Achievements:</h5>
+                                  <ul className="list-disc list-inside text-sm text-white/70 space-y-1">
+                                    {exp.achievements.map((achievement, index) => (
+                                      <li key={index}>{achievement}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          ))
                         )}
                       </div>
-                      <textarea
-                        placeholder="Job Description"
-                        value={newExperience.description || ''}
-                        onChange={(e) => setNewExperience(prev => ({ ...prev, description: e.target.value }))}
-                        className="w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500 min-h-[80px]"
-                      />
-                      <button
-                        onClick={addWorkExperience}
-                        className="btn-primary"
-                        disabled={!newExperience.jobTitle || !newExperience.company}
-                      >
-                        Add Experience
-                      </button>
                     </div>
                   )}
-
-                  <div className="space-y-4">
-                    {profileData.workExperience.map((exp, index) => (
-                      <div key={exp.id} className="bg-cosmic-black/30 rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h4 className="font-medium text-cosmic-gold-400">{exp.jobTitle}</h4>
-                            <div className="flex items-center text-white/80 mb-1">
-                              <Building className="h-4 w-4 mr-1" />
-                              {exp.company}
-                            </div>
-                            {exp.location && (
-                              <div className="flex items-center text-white/60 text-sm mb-1">
-                                <MapPin className="h-4 w-4 mr-1" />
-                                {exp.location}
-                              </div>
-                            )}
-                            <div className="flex items-center text-white/60 text-sm">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
-                            </div>
-                          </div>
-                          {isEditing && (
-                            <button
-                              onClick={() => removeWorkExperience(index)}
-                              className="text-white/70 hover:text-white"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                        {exp.description && (
-                          <p className="text-white/70 text-sm mt-2">{exp.description}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
 
               {activeTab === 'projects' && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-display flex items-center">
-                      <BookOpen className="h-5 w-5 text-cosmic-gold-400 mr-2" />
-                      Projects
-                    </h3>
-                  </div>
-
-                  {isEditing && (
-                    <div className="bg-cosmic-black/20 rounded-lg p-4 space-y-4">
-                      <h4 className="font-medium">Add Project</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                          type="text"
-                          placeholder="Project Name"
-                          value={newProject.name || ''}
-                          onChange={(e) => setNewProject(prev => ({ ...prev, name: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="url"
-                          placeholder="Project URL (optional)"
-                          value={newProject.url || ''}
-                          onChange={(e) => setNewProject(prev => ({ ...prev, url: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="month"
-                          placeholder="Start Date"
-                          value={newProject.startDate || ''}
-                          onChange={(e) => setNewProject(prev => ({ ...prev, startDate: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="month"
-                          placeholder="End Date"
-                          value={newProject.endDate || ''}
-                          onChange={(e) => setNewProject(prev => ({ ...prev, endDate: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
+                  {isEditing ? (
+                    <EnhancedProfileEditor
+                      workExperience={profileData.workExperience}
+                      projects={profileData.projects}
+                      certifications={profileData.certifications}
+                      onUpdateWorkExperience={(experiences) => setProfileData(prev => ({ ...prev, workExperience: experiences }))}
+                      onUpdateProjects={(projects) => setProfileData(prev => ({ ...prev, projects: projects }))}
+                      onUpdateCertifications={(certifications) => setProfileData(prev => ({ ...prev, certifications: certifications }))}
+                    />
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-display flex items-center">
+                          <BookOpen className="h-5 w-5 text-cosmic-gold-400 mr-2" />
+                          Projects
+                        </h3>
                       </div>
-                      <textarea
-                        placeholder="Project Description"
-                        value={newProject.description || ''}
-                        onChange={(e) => setNewProject(prev => ({ ...prev, description: e.target.value }))}
-                        className="w-full bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500 min-h-[80px]"
-                      />
-                      <button
-                        onClick={addProject}
-                        className="btn-primary"
-                        disabled={!newProject.name || !newProject.description}
-                      >
-                        Add Project
-                      </button>
-                    </div>
-                  )}
 
-                  <div className="space-y-4">
-                    {profileData.projects.map((project, index) => (
-                      <div key={project.id} className="bg-cosmic-black/30 rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <div className="flex items-center">
-                              <h4 className="font-medium text-cosmic-gold-400">{project.name}</h4>
-                              {project.url && (
-                                <a
-                                  href={project.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="ml-2 text-cosmic-blue-400 hover:text-cosmic-blue-300"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
+                      <div className="space-y-4">
+                        {profileData.projects.length === 0 ? (
+                          <div className="text-center py-8 text-gray-400">
+                            <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>No projects added yet</p>
+                            <p className="text-sm">Click 'Edit Profile' to showcase your work</p>
+                          </div>
+                        ) : (
+                          profileData.projects.map((project) => (
+                            <div key={project.id} className="bg-cosmic-black/30 rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <div className="flex items-center">
+                                    <h4 className="font-medium text-cosmic-gold-400">{project.name}</h4>
+                                    {project.url && (
+                                      <a
+                                        href={project.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="ml-2 text-cosmic-blue-400 hover:text-cosmic-blue-300"
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </a>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center text-white/60 text-sm">
+                                    <Calendar className="h-4 w-4 mr-1" />
+                                    {formatDate(project.startDate)} - {formatDate(project.endDate)}
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="text-white/70 text-sm">{project.description}</p>
+                              {project.technologies && project.technologies.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {project.technologies.map((tech, index) => (
+                                    <span key={index} className="text-xs bg-cosmic-blue-900/30 rounded px-2 py-1">
+                                      {tech}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {project.achievements && project.achievements.length > 0 && (
+                                <div className="mt-3">
+                                  <h5 className="text-sm font-medium text-cosmic-gold-300 mb-2">Key Achievements:</h5>
+                                  <ul className="list-disc list-inside text-sm text-white/70 space-y-1">
+                                    {project.achievements.map((achievement, index) => (
+                                      <li key={index}>{achievement}</li>
+                                    ))}
+                                  </ul>
+                                </div>
                               )}
                             </div>
-                            <div className="flex items-center text-white/60 text-sm">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              {project.startDate} - {project.endDate}
-                            </div>
-                          </div>
-                          {isEditing && (
-                            <button
-                              onClick={() => removeProject(index)}
-                              className="text-white/70 hover:text-white"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                        <p className="text-white/70 text-sm">{project.description}</p>
-                        {project.technologies && project.technologies.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {project.technologies.map((tech, index) => (
-                              <span key={index} className="text-xs bg-cosmic-blue-900/30 rounded px-2 py-1">
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
+                          ))
                         )}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeTab === 'certifications' && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center">
+                  {isEditing ? (
+                    <EnhancedProfileEditor
+                      workExperience={profileData.workExperience}
+                      projects={profileData.projects}
+                      certifications={profileData.certifications}
+                      onUpdateWorkExperience={(experiences) => setProfileData(prev => ({ ...prev, workExperience: experiences }))}
+                      onUpdateProjects={(projects) => setProfileData(prev => ({ ...prev, projects: projects }))}
+                      onUpdateCertifications={(certifications) => setProfileData(prev => ({ ...prev, certifications: certifications }))}
+                    />
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-display flex items-center">
+                          <Award className="h-5 w-5 text-cosmic-gold-400 mr-2" />
+                          Certifications
+                        </h3>
+                      </div>
+
+                      <div className="space-y-4">
+                        {profileData.certifications.length === 0 ? (
+                          <div className="text-center py-8 text-gray-400">
+                            <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>No certifications added yet</p>
+                            <p className="text-sm">Click 'Edit Profile' to add your professional certifications</p>
+                          </div>
+                        ) : (
+                          profileData.certifications.map((cert) => (
+                            <div key={cert.id} className="bg-cosmic-black/30 rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <div className="flex items-center">
+                                    <h4 className="font-medium text-cosmic-gold-400">{cert.name}</h4>
+                                    {cert.url && (
+                                      <a
+                                        href={cert.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="ml-2 text-cosmic-blue-400 hover:text-cosmic-blue-300"
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </a>
+                                    )}
+                                  </div>
+                                  <p className="text-white/80">{cert.organization}</p>
+                                  <div className="flex items-center text-white/60 text-sm">
+                                    <Calendar className="h-4 w-4 mr-1" />
+                                    Issued: {formatDate(cert.issueDate)}
+                                    {cert.expiryDate && ` • Expires: ${formatDate(cert.expiryDate)}`}
+                                  </div>
+                                  {cert.credentialId && (
+                                    <p className="text-white/60 text-sm">ID: {cert.credentialId}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'achievements' && (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-display flex items-center">
-                      <Award className="h-5 w-5 text-cosmic-gold-400 mr-2" />
-                      Certifications
+                      <Trophy className="h-5 w-5 text-cosmic-gold-400 mr-2" />
+                      Achievements & Points History
                     </h3>
                   </div>
 
-                  {isEditing && (
-                    <div className="bg-cosmic-black/20 rounded-lg p-4 space-y-4">
-                      <h4 className="font-medium">Add Certification</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                          type="text"
-                          placeholder="Certification Name"
-                          value={newCertification.name || ''}
-                          onChange={(e) => setNewCertification(prev => ({ ...prev, name: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Issuing Organization"
-                          value={newCertification.organization || ''}
-                          onChange={(e) => setNewCertification(prev => ({ ...prev, organization: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="month"
-                          placeholder="Issue Date"
-                          value={newCertification.issueDate || ''}
-                          onChange={(e) => setNewCertification(prev => ({ ...prev, issueDate: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="month"
-                          placeholder="Expiry Date (optional)"
-                          value={newCertification.expiryDate || ''}
-                          onChange={(e) => setNewCertification(prev => ({ ...prev, expiryDate: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Credential ID (optional)"
-                          value={newCertification.credentialId || ''}
-                          onChange={(e) => setNewCertification(prev => ({ ...prev, credentialId: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
-                        <input
-                          type="url"
-                          placeholder="Verification URL (optional)"
-                          value={newCertification.url || ''}
-                          onChange={(e) => setNewCertification(prev => ({ ...prev, url: e.target.value }))}
-                          className="bg-cosmic-black/50 border border-cosmic-purple-700/50 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple-500"
-                        />
+                  {/* Points Progress */}
+                  <div className="bg-cosmic-black/20 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 className="font-medium text-lg">{user.points || 0} Points</h4>
+                        <p className="text-sm text-gray-400">Current Rank: {user.rank?.replace('_', ' ') || 'starspark'}</p>
                       </div>
-                      <button
-                        onClick={addCertification}
-                        className="btn-primary"
-                        disabled={!newCertification.name || !newCertification.organization}
-                      >
-                        Add Certification
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    {profileData.certifications.map((cert, index) => (
-                      <div key={cert.id} className="bg-cosmic-black/30 rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <div className="flex items-center">
-                              <h4 className="font-medium text-cosmic-gold-400">{cert.name}</h4>
-                              {cert.url && (
-                                <a
-                                  href={cert.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="ml-2 text-cosmic-blue-400 hover:text-cosmic-blue-300"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
-                              )}
-                            </div>
-                            <p className="text-white/80">{cert.organization}</p>
-                            <div className="flex items-center text-white/60 text-sm">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              Issued: {cert.issueDate}
-                              {cert.expiryDate && ` • Expires: ${cert.expiryDate}`}
-                            </div>
-                            {cert.credentialId && (
-                              <p className="text-white/60 text-sm">ID: {cert.credentialId}</p>
-                            )}
-                          </div>
-                          {isEditing && (
-                            <button
-                              onClick={() => removeCertification(index)}
-                              className="text-white/70 hover:text-white"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          )}
+                      {nextRankInfo.pointsNeeded > 0 && (
+                        <div className="text-right">
+                          <p className="text-sm text-cosmic-gold-400">Next Rank: {nextRankInfo.nextRank.replace('_', ' ')}</p>
+                          <p className="text-xs text-gray-400">{nextRankInfo.pointsNeeded} points needed</p>
                         </div>
+                      )}
+                    </div>
+                    
+                    <div className="w-full bg-cosmic-black/50 rounded-full h-3 overflow-hidden">
+                      <motion.div
+                        className="bg-gradient-to-r from-cosmic-purple-500 to-cosmic-gold-500 h-full rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, ((user.points || 0) / ((user.points || 0) + nextRankInfo.pointsNeeded)) * 100)}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Rank Progression */}
+                  <div className="mb-6">
+                    <h4 className="font-medium mb-4">Rank Progression</h4>
+                    <div className="relative">
+                      <div className="absolute top-1/2 left-0 right-0 h-1 bg-cosmic-black/50 -translate-y-1/2"></div>
+                      <div className="relative flex justify-between">
+                        {[
+                          { rank: 'starspark', points: 0 },
+                          { rank: 'nebula_novice', points: 251 },
+                          { rank: 'astral_apprentice', points: 501 },
+                          { rank: 'comet_crafter', points: 801 },
+                          { rank: 'galactic_guide', points: 1201 },
+                          { rank: 'cosmic_sage', points: 1601 }
+                        ].map((rankInfo, index) => {
+                          const isCurrentOrPassed = (user.points || 0) >= rankInfo.points;
+                          const isCurrent = index < 5 
+                            ? (user.points || 0) >= rankInfo.points && (user.points || 0) < [251, 501, 801, 1201, 1601][index]
+                            : (user.points || 0) >= 1601;
+                          
+                          return (
+                            <div key={rankInfo.rank} className="flex flex-col items-center">
+                              <div 
+                                className={`w-6 h-6 rounded-full z-10 flex items-center justify-center ${
+                                  isCurrentOrPassed 
+                                    ? isCurrent 
+                                      ? 'bg-cosmic-gold-500 text-cosmic-black' 
+                                      : 'bg-cosmic-purple-600 text-white'
+                                    : 'bg-cosmic-black/70 text-gray-500'
+                                }`}
+                              >
+                                {isCurrent ? (
+                                  <Star className="h-3 w-3" />
+                                ) : isCurrentOrPassed ? (
+                                  <CheckCircle className="h-3 w-3" />
+                                ) : (
+                                  <span className="text-xs">{index + 1}</span>
+                                )}
+                              </div>
+                              <div className="mt-2 text-center">
+                                <div className={`text-xs font-medium ${
+                                  isCurrent ? 'text-cosmic-gold-400' : 
+                                  isCurrentOrPassed ? 'text-cosmic-purple-400' : 'text-gray-500'
+                                }`}>
+                                  {rankInfo.rank.replace('_', ' ')}
+                                </div>
+                                <div className={`text-xs ${isCurrentOrPassed ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  {rankInfo.points} pts
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    </div>
+                  </div>
+
+                  {/* Points History */}
+                  <div>
+                    <h4 className="font-medium mb-4">Points History</h4>
+                    {pointsHistory.length === 0 ? (
+                      <div className="text-center py-8 text-gray-400">
+                        <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No points history yet</p>
+                        <p className="text-sm">Complete activities to earn points</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {pointsHistory.map((entry) => (
+                          <motion.div
+                            key={entry.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-cosmic-black/30 rounded-lg p-4"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="flex items-center">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                                    entry.points > 0 ? 'bg-cosmic-gold-900/30' : 'bg-red-900/30'
+                                  }`}>
+                                    {entry.source === 'lesson_completion' && <BookOpen className="h-4 w-4 text-cosmic-gold-400" />}
+                                    {entry.source === 'skill_swap' && <Users className="h-4 w-4 text-cosmic-purple-400" />}
+                                    {entry.source === 'profile_update' && <User className="h-4 w-4 text-cosmic-blue-400" />}
+                                    {entry.source === 'decay' && <Clock className="h-4 w-4 text-red-400" />}
+                                  </div>
+                                  <div>
+                                    <h5 className="font-medium">
+                                      {entry.source === 'lesson_completion' && 'Lesson Completed'}
+                                      {entry.source === 'skill_swap' && 'Skill Swap'}
+                                      {entry.source === 'profile_update' && 'Profile Updated'}
+                                      {entry.source === 'decay' && 'Points Decay'}
+                                    </h5>
+                                    <p className="text-sm text-gray-400">
+                                      {new Date(entry.created_at).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className={`text-lg font-bold ${
+                                entry.points > 0 ? 'text-cosmic-gold-400' : 'text-red-400'
+                              }`}>
+                                {entry.points > 0 ? '+' : ''}{entry.points}
+                              </div>
+                            </div>
+                            
+                            {/* Details */}
+                            {entry.details && (
+                              <div className="mt-2 ml-11 text-sm text-gray-400">
+                                {entry.source === 'lesson_completion' && entry.details.lesson_title && (
+                                  <p>Completed: {entry.details.lesson_title}</p>
+                                )}
+                                {entry.source === 'skill_swap' && entry.details.match_username && (
+                                  <p>Matched with: {entry.details.match_username}</p>
+                                )}
+                              </div>
+                            )}
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
