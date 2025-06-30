@@ -341,7 +341,7 @@ export const EnhancedCoursePlayer: React.FC<EnhancedCoursePlayerProps> = ({
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 pt-24 pb-8">
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="xl:col-span-3 space-y-8">

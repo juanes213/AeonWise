@@ -54,16 +54,16 @@ const Navbar: React.FC = () => {
       )}
     >
       <div className="container mx-auto px-4 md:px-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center">
             <span className="font-display text-2xl tracking-wider bg-gradient-to-r from-cosmic-purple-400 to-cosmic-gold-400 bg-clip-text text-transparent">
               AeonWise
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-8 ml-8">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -90,7 +90,7 @@ const Navbar: React.FC = () => {
           </div>
 
           {/* Auth and Controls */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4 ml-auto">
             {/* Notifications */}
             {user && (
               <NotificationCenter />
@@ -142,7 +142,7 @@ const Navbar: React.FC = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden text-white"
+            className="md:hidden text-white ml-auto"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
           >
