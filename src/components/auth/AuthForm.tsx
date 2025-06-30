@@ -20,7 +20,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Add diagnostic logging to track user and loading state
+    console.log('AuthForm useEffect - user:', user?.username || 'none', 'isLoading:', isLoading);
+    
     if (!isLoading && user) {
+      console.log('AuthForm navigating to profile - user is loaded and not loading');
       navigate('/profile');
     }
   }, [user, isLoading, navigate]);
@@ -28,6 +32,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log('AuthForm handleSubmit - attempting sign in');
 
     try {
       const { error } = await signIn(formData.email, formData.password);
@@ -35,6 +40,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         throw error;
       }
       
+      console.log('AuthForm handleSubmit - sign in successful');
       toast({
         title: 'Welcome back!',
         description: 'Successfully signed in to your cosmic journey',

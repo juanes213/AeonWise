@@ -17,6 +17,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
+    storageKey: 'aeonwise-auth-storage',
     detectSessionInUrl: false
+  },
+  global: {
+    headers: {
+      'x-application-name': 'aeonwise'
+    }
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
 });
+
+// Log session persistence details
+console.log('Supabase client initialized with session persistence enabled');
+console.log('Storage key:', 'aeonwise-auth-storage');
