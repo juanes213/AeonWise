@@ -9,6 +9,8 @@
 
 AeonWise is a revolutionary learning platform that combines AI-powered education with community-driven knowledge sharing. Our cosmic-themed interface creates an immersive experience where learners can explore new skills, connect with mentors, and track their progress through a gamified ranking system.
 
+[AeonWise](https://aeonwise.org/)
+
 ## ✨ Key Features
 
 ### 🚀 Interactive Learning
@@ -70,15 +72,6 @@ AeonWise offers a structured learning path:
 | Galactic Guide | 1201-1600 | Exclusive forums, host community events |
 | Cosmic Sage | 1601+ | Create courses, special profile badge |
 
-## 🤝 Contributing
-
-We welcome contributions to AeonWise! Whether you're fixing bugs, adding features, or improving documentation, your help is appreciated.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## 📝 License
 
